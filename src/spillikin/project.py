@@ -67,9 +67,13 @@ class Project:
     sources: dict[str, Relation]
     models: dict[str, Relation]
     exposures: dict[str, Exposure]
+    strict_docs: bool = True  # a hand-written manifest must match the SQL; documentation inherited from dbt may lag it
+    fingerprint_seed: str = ""  # set by loaders that have no manifest file of their own to hash
 
     @property
     def fingerprint(self) -> str:
+        if self.fingerprint_seed:
+            return self.fingerprint_seed
         digest = hashlib.sha256()
         digest.update((self.root / MANIFEST_NAME).read_bytes())
         for model in sorted(self.models.values(), key=lambda m: m.id):
@@ -134,10 +138,15 @@ def render(sql: str, sources: dict[str, Relation], model_names: set[str], where:
 
 
 def load(root: Path | str) -> Project:
+    """A native project (spillikin.yml) or, failing that, a compiled dbt project (target/manifest.json)."""
     root = Path(root).resolve()
     manifest_path = root / MANIFEST_NAME
     if not manifest_path.is_file():
-        raise ProjectError(f"no {MANIFEST_NAME} in {root}")
+        from . import dbt  # imported here: dbt.py builds on the types defined in this module
+
+        if dbt.is_dbt_project(root):
+            return dbt.load(root)
+        raise ProjectError(f"{root} holds neither {MANIFEST_NAME} nor a compiled dbt project (target/manifest.json)")
     try:
         manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as exc:

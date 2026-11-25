@@ -32,6 +32,7 @@ def build(root: Path | str, store: stores.Store) -> dict[str, Any]:
         "row_edges": len(desired.edges["SHAPES"]),
         "exposures": len(desired.nodes["Exposure"]),
         "changed": not delta.empty,
+        "stale_docs": desired.stale_docs,
         **delta.counts(),
     }
 

@@ -127,6 +127,7 @@ class Graph:
 
     nodes: dict[str, dict[str, dict[str, Any]]] = field(default_factory=lambda: {label: {} for label in NODE_LABELS})
     edges: dict[str, dict[tuple[str, str], dict[str, Any]]] = field(default_factory=lambda: {k: {} for k in EDGE_SPECS})
+    stale_docs: list[str] = field(default_factory=list)  # documented columns the SQL no longer outputs
 
     def columns_of(self, relation: str) -> list[str]:
         owned = [(props["ordinal"], cid) for cid, props in self.nodes["Column"].items() if props["relation"] == relation]
@@ -184,8 +185,9 @@ def from_project(project: Project, lineage: dict[str, ModelLineage]) -> Graph:
 
     for name, model in lineage.items():
         declared = set(relations[name].columns) - set(model.columns)
-        if declared:
+        if declared and project.strict_docs:
             raise StoreError(f"{name}: manifest describes columns the model does not output: {sorted(declared)}")
+        graph.stale_docs += [column_id(name, column) for column in sorted(declared)]
         for parent in model.reads:
             graph.edges["UPSTREAM_OF"][(parent, name)] = {}
         for col in model.columns.values():
@@ -202,7 +204,8 @@ def from_project(project: Project, lineage: dict[str, ModelLineage]) -> Graph:
             "description": exposure.description,
         }
         add_owner(exposure.owner, "OWNS_EXPOSURE", exposure.id)
-        for cid in exposure.reads:
+        reads = [c for cid in exposure.reads for c in (graph.columns_of(cid[:-2]) if cid.endswith(".*") else [cid])]
+        for cid in reads:
             if cid not in graph.nodes["Column"]:
                 # A model that failed to extract cannot vouch for its columns either way.
                 if cid.rpartition(".")[0] in project.models and cid.rpartition(".")[0] not in lineage:

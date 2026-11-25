@@ -67,6 +67,7 @@ def cmd_build(args: argparse.Namespace) -> int:
         f"{result['project']}: {result['relations']} relations, {result['columns']} columns, "
         f"{result['value_edges']} value edges, {result['row_edges']} row edges, {result['exposures']} exposures\n"
         f"store {state} at {store.path}"
+        + "".join(f"\nnote: {column} is documented but the model no longer outputs it" for column in result["stale_docs"])
     ))
     return 0
 

@@ -47,7 +47,7 @@ class Hub:
         self.refresh()
 
     def _stamp(self) -> tuple[Any, ...]:
-        files = [self.root / MANIFEST_NAME, *sorted(self.root.rglob("*.sql"))]
+        files = [self.root / MANIFEST_NAME, self.root / "target" / "manifest.json", *sorted(self.root.rglob("*.sql"))]
         sql = tuple((f.as_posix(), f.stat().st_mtime_ns) for f in files if f.is_file())
         graph = self.store.path / "graph.json"
         wal = sorted((self.store.path / "wal").glob("*.log")) if (self.store.path / "wal").is_dir() else []

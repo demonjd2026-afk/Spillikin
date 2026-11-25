@@ -127,6 +127,19 @@ Other commands: `spillikin build` re-syncs the graph after you change SQL, `spil
 
 Run the tests with `pytest -q`.
 
+### Use it on a dbt project
+
+Spillikin reads what dbt already wrote, so macros and Jinja are dbt's job:
+
+```bash
+cd your-dbt-project
+dbt compile && dbt docs generate          # writes target/manifest.json and target/catalog.json
+spillikin build --project .               # the store is created at ./store
+spillikin impact seed.raw_orders.id --project .
+```
+
+Models, seeds, sources, column tests and exposures come from the manifest; seed and source columns come from the catalog. Tested against dbt's public [jaffle_shop](https://github.com/dbt-labs/jaffle_shop) project (dbt-core 1.12.7, dbt-duckdb 1.11.1): 8 relations, 38 columns, and `seed.raw_orders.id` reaches 17 columns, 14 of them through joins. It also reported that `customers.total_order_amount` is documented in that project but no longer output by the model.
+
 ### Watch it live
 
 ```bash
@@ -188,9 +201,12 @@ The write-ahead log and lock files are not committed. Relate recreates them the 
 
 ## Design
 
+![Spillikin architecture: SQL or a compiled dbt project is read by the lineage engine into a Relate directory store, which the CLI, MCP server, live server and browser explorer query](docs/architecture.png)
+
 ```
 src/spillikin/
   project.py     manifest and model files -> typed project; resolves ref() and source(), refuses other template tags
+  dbt.py         the same typed project from dbt's manifest.json and catalog.json
   lineage.py     sqlglot AST -> FEEDS and SHAPES per model, traced through CTEs, subqueries and set operations
   store.py       opening Relate, schema, and a diff-based sync so an unchanged project writes nothing
   analysis.py    blast radius, provenance, search: the Cypher lives here
@@ -216,9 +232,10 @@ Decisions worth knowing about:
 
 ## Limits
 
-- Models must be single `SELECT` statements. Only `ref()`, `source()` and `config()` template tags are understood; other Jinja is refused, not skipped.
+- Models must be single `SELECT` statements. In a native project only `ref()`, `source()` and `config()` template tags are understood; other Jinja is refused, not skipped. For anything more, compile with dbt and point Spillikin at the dbt project.
+- The dbt reader has been run on one small public project. Exposures in dbt name models, not columns, so every column of the model is treated as read.
 - Column lineage through table functions and `UNNEST` is not traced.
-- Sources must declare their columns in `spillikin.yml`.
+- Sources must declare their columns in `spillikin.yml` (native) or appear in dbt's catalog.
 - Tested on Linux with Python 3.13, relate-db 1.2.0, sqlglot 30.35, mcp 2.3; the explorer in headless Chromium with Node 22. The `relate serve` command above is taken from the Relate documentation.
 
 ## Third-party software and data
