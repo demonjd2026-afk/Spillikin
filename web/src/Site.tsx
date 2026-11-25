@@ -212,6 +212,7 @@ spillikin serve     # the same answers over MCP
 spillikin live      # this explorer, updating as files change`}</pre>
           <p>
             No account, API key or server. The graph is a Relate directory store committed next to the SQL, and continuous integration fails when the two disagree.
+            It also reads a compiled dbt project: run <code>dbt compile</code> and <code>dbt docs generate</code>, then point Spillikin at the folder.
             The full walkthrough, the graph model and the design notes are in the README.
           </p>
         </div>

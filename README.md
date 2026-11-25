@@ -197,7 +197,7 @@ The explorer reimplements the blast-radius rules in TypeScript on top of Relate 
 | `examples/meridian/models/` | The 15 SQL models the graph is built from |
 | `web/public/graph.json` | The same graph exported for the browser explorer |
 
-The write-ahead log and lock files are not committed. Relate recreates them the first time the store is opened for writing, which `spillikin` does for you on a fresh clone. Claims are runtime state: they live in the same store so they can be joined to lineage, and the committed snapshot holds none.
+The write-ahead log and lock files are not committed. Relate recreates them the first time the store is opened for writing, which `spillikin` does for you on a fresh clone. Claims are runtime state: they live in the same store so they can be joined to lineage, and the committed snapshot holds none. Relate rewrites the snapshot when claims are made, so after trying the claim commands git will show the store as modified; `git checkout examples/meridian/store` puts the committed snapshot back.
 
 ## Design
 
