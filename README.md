@@ -1,16 +1,28 @@
-# Spillikin
+<p align="center">
+  <a href="https://youtu.be/w529NDxRyRk"><img src="docs/demo-thumbnail.png" alt="Spillikin demo video: pull one column without moving the rest. Relate by Neo4j Hackathon." width="720"></a>
+</p>
 
-[![Spillikin demo video: pull one column without moving the rest. Relate by Neo4j Hackathon.](docs/demo-thumbnail.png)](https://youtu.be/w529NDxRyRk)
+<h1 align="center">Spillikin</h1>
 
-**Pull one column without moving the rest.** Spillikin turns a SQL project into a column-level lineage graph stored in [Relate](https://relatedb.ai). Before a coding agent edits a model, it asks the graph what the change reaches, and whether another agent's change reaches the same place.
+<p align="center"><strong>Pull one column without moving the rest.</strong><br>
+Column lineage for coding agents: Spillikin turns a SQL project into a column-level graph stored in <a href="https://relatedb.ai">Relate</a>. Before an agent edits a model, it asks the graph what the change reaches, and whether another agent's change reaches the same place.</p>
 
-A spillikin is a stick in the game of pick-up sticks: you win by lifting one out without disturbing the pile.
+<p align="center">
+  <a href="https://youtu.be/w529NDxRyRk"><strong>Demo video</strong></a> ·
+  <a href="https://demonjd2026-afk.github.io/Spillikin/"><strong>Live explorer</strong></a> ·
+  <a href="#try-it"><strong>Try it</strong></a> ·
+  <a href="#for-judges-where-to-look"><strong>For judges</strong></a>
+</p>
 
-| | |
-|---|---|
-| **Demo video (2 minutes)** | https://youtu.be/w529NDxRyRk |
-| **Live explorer, nothing to install** | https://demonjd2026-afk.github.io/Spillikin/ |
-| **Built for** | [Relate by Neo4j Hackathon](https://relate.devpost.com/) |
+<p align="center">
+  <a href="https://github.com/demonjd2026-afk/Spillikin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/demonjd2026-afk/Spillikin/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/demonjd2026-afk/Spillikin/actions/workflows/pages.yml"><img alt="Live explorer" src="https://github.com/demonjd2026-afk/Spillikin/actions/workflows/pages.yml/badge.svg"></a>
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-blue">
+  <img alt="Graph: Relate 1.2" src="https://img.shields.io/badge/graph-Relate%201.2-018BFF">
+  <a href="LICENSE"><img alt="Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-green"></a>
+</p>
+
+Built by [Jayanth Dolai](https://www.linkedin.com/in/jayanth-dolai-7b115213a/) for the **[Relate by Neo4j Hackathon](https://relate.devpost.com/)**. A spillikin is a stick in the game of pick-up sticks: you win by lifting one out without disturbing the pile.
 
 ## Contents
 
