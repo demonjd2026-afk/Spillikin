@@ -4,6 +4,9 @@
 
 Built for the Relate by Neo4j Hackathon.
 
+**Try it in your browser, nothing to install: https://demonjd2026-afk.github.io/Spillikin/**
+The explorer loads the lineage graph into Relate's WebAssembly build and runs the same Cypher in the tab. Click a column to see what it moves.
+
 ## Use case
 
 A coding agent is asked to change how `raw.orders.status` is populated. It searches the repository, finds one model that selects the column, edits it, and reports success.
@@ -74,6 +77,7 @@ ORDER BY exposure
 - A full-text index queried with `SEARCH ... SCORE AS`, used to turn a phrase such as "paid revenue" into column ids.
 - Transactions: a claim's collision check and its insert are one transaction under the single writer lease. Six processes racing to claim the same column get exactly one grant (see `tests/test_graph.py`).
 - Read-only opens beside the writer.
+- The WebAssembly build (`@relate/relate-wasm` 1.2.0) as an in-memory store in the browser explorer. It cannot open a store from disk, so the explorer loads `web/public/graph.json`, an export of the committed store that CI keeps identical to it.
 
 ## Setup and run
 
@@ -144,6 +148,19 @@ For ad hoc Cypher, Relate's own read-only MCP server can serve the same store (r
 relate serve --mcp stdio --database examples/meridian/store --read-only
 ```
 
+### Run the explorer locally
+
+Requires Node 22 or later.
+
+```bash
+cd web
+npm ci
+npm run dev          # http://localhost:5173
+npm run parity       # browser engine vs Python engine, every column, both change kinds
+```
+
+The explorer reimplements the blast-radius rules in TypeScript on top of Relate WebAssembly. `npm run parity` runs both engines over all 135 columns for both kinds of change (270 blast radii) and fails on any difference; CI runs it on every push.
+
 ## Where the data lives
 
 | Path | What it is |
@@ -153,6 +170,7 @@ relate serve --mcp stdio --database examples/meridian/store --read-only
 | `examples/meridian/store/.relate/schema/schema.cypher` | Constraints and the full-text index, as Cypher |
 | `examples/meridian/spillikin.yml` | Sources, owners, tests and exposures |
 | `examples/meridian/models/` | The 15 SQL models the graph is built from |
+| `web/public/graph.json` | The same graph exported for the browser explorer |
 
 The write-ahead log and lock files are not committed. Relate recreates them the first time the store is opened for writing, which `spillikin` does for you on a fresh clone. Claims are runtime state: they live in the same store so they can be joined to lineage, and the committed snapshot holds none.
 
@@ -168,6 +186,10 @@ src/spillikin/
   workflow.py    build and check
   cli.py         command line
   mcp_server.py  MCP tools
+web/src/
+  engine.ts      Relate WebAssembly: loads the graph, runs the Cypher, same rules as analysis.py
+  Board.tsx      the lineage table; edges are drawn as sticks, measured from the rendered tiles
+  App.tsx        search, change kind, result panel
 ```
 
 Decisions worth knowing about:
@@ -182,11 +204,11 @@ Decisions worth knowing about:
 - Models must be single `SELECT` statements. Only `ref()`, `source()` and `config()` template tags are understood; other Jinja is refused, not skipped.
 - Column lineage through table functions and `UNNEST` is not traced.
 - Sources must declare their columns in `spillikin.yml`.
-- Tested on Linux with Python 3.13, relate-db 1.2.0, sqlglot 30.35, mcp 2.3. The `relate serve` command above is taken from the Relate documentation.
+- Tested on Linux with Python 3.13, relate-db 1.2.0, sqlglot 30.35, mcp 2.3; the explorer in headless Chromium with Node 22. The `relate serve` command above is taken from the Relate documentation.
 
 ## Third-party software and data
 
-[Relate](https://github.com/relatedb/relate) (Apache-2.0), [sqlglot](https://github.com/tobymao/sqlglot) (MIT), [PyYAML](https://pyyaml.org) (MIT), the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) (MIT), pytest (MIT). Meridian is a fictional company; its schema and models were written for this project and contain no real data.
+[Relate](https://github.com/relatedb/relate) (Apache-2.0), [sqlglot](https://github.com/tobymao/sqlglot) (MIT), [PyYAML](https://pyyaml.org) (MIT), the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) (MIT), pytest (MIT). The explorer uses React, Vite, Tailwind CSS and Motion (all MIT) and the Fraunces, Instrument Sans and JetBrains Mono typefaces (SIL Open Font License). Meridian is a fictional company; its schema and models were written for this project and contain no real data.
 
 ## License
 

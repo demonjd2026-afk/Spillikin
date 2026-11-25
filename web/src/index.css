@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/instrument-sans';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* The palette is a game of pick-up sticks: a baize table, birch tiles, wooden sticks with painted bands. */
+@theme {
+  --color-baize: #1e4a3a;
+  --color-baize-deep: #163a2d;
+  --color-birch: #f2e8d0;
+  --color-birch-dim: #d9cfb6;
+  --color-ink: #18211d;
+  --color-wood: #e0c48e;
+  --color-band-red: #d2402f;
+  --color-band-blue: #2b65c7;
+  --color-band-yellow: #f1be2e;
+  --font-display: 'Fraunces Variable', Georgia, serif;
+  --font-sans: 'Instrument Sans Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background-color: var(--color-baize);
+  /* Felt: fine noise over the flat green, so the table reads as cloth. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23f)'/%3E%3C/svg%3E");
+  color: var(--color-birch);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+:focus-visible { outline: 2px solid var(--color-band-yellow); outline-offset: 2px; }
+
+.wordmark { font-family: var(--font-display); font-variation-settings: 'SOFT' 100, 'WONK' 1; font-weight: 560; letter-spacing: -0.03em; }
+
+.tile, .exposure { position: relative; z-index: 1; }
+.tile { background: var(--color-birch); color: var(--color-ink); border-radius: 5px; box-shadow: 0 1px 0 #fff6 inset, 0 3px 0 var(--color-baize-deep); }
+.tile-head { padding: 7px 10px 6px; border-bottom: 1px solid #18211d24; }
+.tile-name { font-family: var(--font-mono); font-size: 12.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-meta { font-size: 11.5px; opacity: 0.62; }
+
+.col {
+  display: flex; align-items: center; gap: 6px; width: 100%; height: 23px; padding: 0 10px 0 7px;
+  border: 0; border-left: 4px solid transparent; background: transparent; color: inherit; text-align: left;
+  font-family: var(--font-mono); font-size: 11.5px; cursor: pointer; transition: background-color 0.18s, opacity 0.18s;
+}
+.col:hover { background: #18211d14; }
+.col[data-state='idle'][data-dim='true'] { opacity: 0.36; }
+.col[data-state='target'] { background: var(--color-band-yellow); border-left-color: var(--color-ink); font-weight: 700; }
+.col[data-state='value'] { background: #f6cbbf; border-left-color: var(--color-band-red); }
+.col[data-state='rows'] { background: #c9daf5; border-left-color: var(--color-band-blue); }
+.col[data-state='reads'] { background: #c9c1ac; border-left-color: var(--color-ink); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.col .untested { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid currentColor; opacity: 0.55; flex: none; }
+
+.exposure { border-radius: 5px; border: 1.5px dashed #f2e8d066; padding: 9px 11px; transition: background-color 0.2s, border-color 0.2s; }
+.exposure[data-hit='true'] { background: var(--color-birch); color: var(--color-ink); border: 1.5px solid var(--color-birch); }
+
+.panel { background: var(--color-baize-deep); border-left: 1px solid #f2e8d01f; }
+.count { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-weight: 500; font-size: 4.2rem; line-height: 0.95; letter-spacing: -0.04em; }
+.swatch { display: inline-block; width: 18px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 7px; }
+pre.cypher { font-family: var(--font-mono); font-size: 11px; line-height: 1.55; background: #0000002e; border-radius: 5px; padding: 11px 12px; white-space: pre-wrap; overflow-wrap: anywhere; color: #f2e8d0e0; }
+
+.seg { display: inline-flex; border: 1px solid #f2e8d04d; border-radius: 6px; overflow: hidden; }
+.seg button { padding: 6px 12px; font-size: 13px; background: transparent; color: inherit; border: 0; cursor: pointer; }
+.seg button[aria-pressed='true'] { background: var(--color-birch); color: var(--color-ink); font-weight: 600; }
+
+.field { background: #0000002e; border: 1px solid #f2e8d04d; border-radius: 6px; padding: 7px 11px; color: inherit; font-size: 14px; width: 100%; }
+.field::placeholder { color: #f2e8d08c; }
+.starter { font-family: var(--font-mono); font-size: 12px; background: var(--color-birch); color: var(--color-ink); border: 0; border-radius: 5px; padding: 6px 10px; cursor: pointer; box-shadow: 0 3px 0 #0000004d; }
+.starter:active { transform: translateY(2px); box-shadow: 0 1px 0 #0000004d; }
+a { color: inherit; text-underline-offset: 3px; }

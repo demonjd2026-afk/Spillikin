@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 dist/
 node_modules/
+web/dist/
 
 # Relate runtime files. The snapshot (graph.json, manifest.json, .relate/schema) is committed;
 # the write-ahead log and lock files are rebuilt on first open.
