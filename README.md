@@ -1,5 +1,7 @@
 # spillikin
 
+[![Spillikin: pull one column without moving the rest. Relate by Neo4j Hackathon.](docs/demo-thumbnail.png)](https://demonjd2026-afk.github.io/Spillikin/)
+
 **Pull one column without moving the rest.** A spillikin is a stick in the game of pick-up sticks: you win by lifting one out without disturbing the pile. Spillikin does that for SQL. It turns a SQL project into a column-level lineage graph in [Relate](https://relatedb.ai), so a coding agent can ask what a change reaches, and find out when another agent's change reaches the same place.
 
 Built for the Relate by Neo4j Hackathon.

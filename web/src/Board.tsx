@@ -105,7 +105,7 @@ export function Board({ graph, radius, chips, meet, focus, zoom, onPick }: {
   // picked column at full size, travel right one hop at a time as tables arrive, then pull back to show it all.
   const selection = radius ? `${radius.target}:${radius.change}` : '';
   useLayoutEffect(() => {
-    if (!selection || !focused || zoom !== 'fit' || still || room === 0 || natural <= room * 1.03) { setCine(0); return; }
+    if (!selection || !focused || zoom !== 'fit' || still || room === 0) { setCine(0); return; }
     runs.current += 1;
     setCine(runs.current);
   }, [selection, focused, zoom, still]); // eslint-disable-line react-hooks/exhaustive-deps -- a resize must not restart the shot
@@ -126,7 +126,7 @@ export function Board({ graph, radius, chips, meet, focus, zoom, onPick }: {
     const last = Math.max(...byBeat.keys());
     const ease = [0.3, 0.1, 0.2, 1] as const;
     const moves: { stop: () => void }[] = [];
-    camS.set(CLOSE);
+    camS.set(Math.max(CLOSE, fit)); // a small selection that already fits is simply revealed step by step
     camX.set(aim(byBeat.get(0) ?? 0));
     // One move per beat, each started when its beat begins: a queued move would cancel the one before it.
     const timers = [...byBeat.entries()].filter(([step]) => step > 0).map(([step, x]) =>
