@@ -71,12 +71,48 @@ const ROW_STICKS = `MATCH (a:Column)-[:SHAPES]->(m:Relation) WHERE a.id IN $ids 
 const SEARCH = `MATCH (c:Column) SEARCH c IN (FULLTEXT INDEX column_text FOR $query LIMIT 8) SCORE AS score
 RETURN c.id AS id, c.description AS description ORDER BY score DESC, id`;
 
+export interface Claim { id: string; agent: string; intent: string; change: Change; targets: string[]; reach: number }
+export interface Blocker { claim: string; agent: string; intent: string; columns: string[]; exposures: string[] }
+export interface Refusal { id: string; agent: string; intent: string; targets: string[]; blocked_by: Blocker[] }
+
+const COLLISIONS = `MATCH (holder:Agent)-[:HOLDS]->(claim:Claim {status: 'open'})-[:TARGETS|REACHES]->(c:Column)
+WHERE holder.id <> $agent AND c.id IN $columns
+OPTIONAL MATCH (c)-[:SURFACES_IN]->(e:Exposure)
+RETURN claim.id AS claim, holder.id AS agent, claim.intent AS intent,
+       collect(DISTINCT c.id) AS columns, collect(DISTINCT e.id) AS exposures ORDER BY claim`;
+
+const OPEN_CLAIM = `MERGE (agent:Agent {id: $agent})
+CREATE (agent)-[:HOLDS]->(claim:Claim {id: $id, intent: $intent, change: $change, status: $status, opened_at: $now})
+WITH claim
+CALL (claim) { UNWIND $targets AS id MATCH (c:Column {id: id}) CREATE (claim)-[:TARGETS]->(c) }
+CALL (claim) { UNWIND $reach AS id MATCH (c:Column {id: id}) CREATE (claim)-[:REACHES]->(c) }
+CALL (claim) {
+  UNWIND $blockers AS b MATCH (other:Claim {id: b.claim})
+  CREATE (claim)-[:BLOCKED_BY {columns: b.columns, exposures: b.exposures}]->(other)
+}`;
+
+const OPEN_CLAIMS = `MATCH (agent:Agent)-[:HOLDS]->(claim:Claim {status: 'open'})
+RETURN claim.id AS id, agent.id AS agent, claim.intent AS intent, claim.change AS change,
+       COLLECT { MATCH (claim)-[:TARGETS]->(c:Column) RETURN c.id ORDER BY c.id } AS targets,
+       COUNT { (claim)-[:REACHES]->(:Column) } AS reach
+ORDER BY claim.opened_at, id`;
+
+const REFUSALS = `MATCH (agent:Agent)-[:HOLDS]->(claim:Claim {status: 'refused'})
+RETURN claim.id AS id, agent.id AS agent, claim.intent AS intent,
+       COLLECT { MATCH (claim)-[:TARGETS]->(c:Column) RETURN c.id ORDER BY c.id } AS targets,
+       COLLECT {
+         MATCH (claim)-[b:BLOCKED_BY]->(other:Claim)<-[:HOLDS]-(holder:Agent)
+         RETURN {claim: other.id, agent: holder.id, intent: other.intent, columns: b.columns, exposures: b.exposures}
+       } AS blocked_by
+ORDER BY claim.opened_at DESC, id`;
+
 interface Envelope<T> { rows: T[]; error: string | null; elapsed_ms: number }
 
 export class Engine {
   private readonly db: RelateDb;
   readonly version: string;
   readonly loadMs: number;
+  private sequence = 0;
 
   private constructor(db: RelateDb, version: string, loadMs: number) {
     this.db = db;
@@ -152,6 +188,39 @@ export class Engine {
       ...this.run<{ src: string; dst: string }>(ROW_STICKS, { ids, relations }).rows.map((s) => ({ ...s, kind: 'rows' as const })),
     ];
     return { target, change, hits: list, brokenModels, exposures, owners: [...owners].sort(), sticks, statement: REACH, engineMs: reach.elapsed_ms };
+  }
+
+  /** Records intent to change a column, or records the refusal when it meets someone else's open claim. */
+  claim(agent: string, target: string, change: Change, intent: string): { granted: boolean; blockers: Blocker[] } {
+    const radius = this.blastRadius(target, change);
+    const reach = radius.hits.map((hit) => hit.id);
+    const blockers = this.run<Blocker>(COLLISIONS, { agent, columns: [target, ...reach] }).rows
+      .map((b) => ({ ...b, columns: [...b.columns].sort(), exposures: [...b.exposures].sort() }));
+    this.sequence += 1;
+    this.run(OPEN_CLAIM, {
+      agent, intent, change, targets: [target], now: this.sequence,
+      id: `clm_${this.sequence.toString().padStart(4, '0')}`,
+      status: blockers.length ? 'refused' : 'open',
+      reach: blockers.length ? [] : reach,
+      blockers,
+    });
+    return { granted: blockers.length === 0, blockers };
+  }
+
+  release(id: string): void {
+    this.run("MATCH (claim:Claim {id: $id}) SET claim.status = 'released'", { id });
+  }
+
+  clearClaims(): void {
+    this.run('MATCH (claim:Claim) DETACH DELETE claim');
+  }
+
+  claims(): Claim[] {
+    return this.run<Claim>(OPEN_CLAIMS).rows;
+  }
+
+  refusals(): Refusal[] {
+    return this.run<Refusal>(REFUSALS).rows;
   }
 
   search(text: string): { id: string; description: string }[] {

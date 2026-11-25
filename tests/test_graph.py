@@ -78,12 +78,16 @@ def test_claims_collide_when_their_reach_meets_downstream(meridian):
     assert second["collisions"][0]["agent"] == "agent-a"
     assert "month_end_close" in second["collisions"][0]["exposures"]
     assert own["granted"], "an agent does not collide with itself"
+    with store.read() as conn:
+        (refusal,) = claims.recent_refusals(conn, now=1002)
+    assert refusal["agent"] == "agent-b" and refusal["blocked_by"][0]["agent"] == "agent-a"
+    assert "fct_revenue_daily.paid_revenue_usd" in refusal["blocked_by"][0]["columns"]
 
     with store.write() as conn:
         claims.release_claim(conn, first["claim"], now=1002)
         claims.release_claim(conn, own["claim"], now=1002)
         retry = claims.open_claim(conn, "agent-b", ["raw.fx_rates.usd_rate"], "switch to mid-market rates", "logic", now=1003)
-        assert claims.prune_claims(conn, now=1003) == 2
+        assert claims.prune_claims(conn, now=1003) == 3  # two released, one refused attempt
     assert retry["granted"]
 
 

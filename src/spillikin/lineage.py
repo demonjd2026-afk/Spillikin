@@ -160,6 +160,14 @@ def _is_within(node: exp.Expression, ancestor: exp.Expression) -> bool:
     return False
 
 
+def _readable(sql: str, relations: dict[str, str]) -> str:
+    """Show sources by the name people use (raw.orders), not the identifier the parser saw (raw__orders)."""
+    for ident, relation in relations.items():
+        if ident != relation:
+            sql = sql.replace(ident, relation)
+    return sql
+
+
 def classify(projection: exp.Expression) -> str:
     body = projection.unalias()
     if isinstance(body, exp.Column):
@@ -203,7 +211,7 @@ def extract(model: Relation, schema: dict[str, dict[str, str]], relations: dict[
         columns[name] = OutputColumn(
             name=name,
             ordinal=index,
-            expression=head.selects[index].unalias().sql(dialect=dialect),
+            expression=_readable(head.selects[index].unalias().sql(dialect=dialect), relations),
             feeds={ref: KINDS[rank] for ref, rank in sorted(tracer.output(root, index).items())},
         )
 

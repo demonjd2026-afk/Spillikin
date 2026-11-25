@@ -19,7 +19,6 @@
   --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
 }
 
-html, body, #root { height: 100%; }
 
 body {
   margin: 0;
@@ -72,3 +71,20 @@ pre.cypher { font-family: var(--font-mono); font-size: 11px; line-height: 1.55; 
 .starter { font-family: var(--font-mono); font-size: 12px; background: var(--color-birch); color: var(--color-ink); border: 0; border-radius: 5px; padding: 6px 10px; cursor: pointer; box-shadow: 0 3px 0 #0000004d; }
 .starter:active { transform: translateY(2px); box-shadow: 0 1px 0 #0000004d; }
 a { color: inherit; text-underline-offset: 3px; }
+
+.stage { height: calc(100vh - 6.5rem); min-height: 38rem; border-block: 1px solid #f2e8d01f; }
+.heading { font-size: 13px; font-weight: 600; opacity: 0.75; }
+.link { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-family: var(--font-mono); font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.agent { font-family: var(--font-mono); font-size: 12px; background: var(--color-band-yellow); color: var(--color-ink); border-radius: 3px; padding: 1px 6px; font-weight: 600; }
+.chip { margin-left: auto; font-size: 10px; background: var(--color-ink); color: var(--color-band-yellow); border-radius: 3px; padding: 0 5px; flex: none; }
+.chip + .untested { margin-left: 4px; }
+.col[data-meet='true'] { box-shadow: inset 0 0 0 2px var(--color-band-yellow); font-weight: 700; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; margin: 0 13px 0 5px; }
+.note { background: #d2402f33; border-radius: 5px; padding: 8px 10px; margin-bottom: 14px; font-size: 13px; }
+.live { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; margin: 0 0 6px; }
+.pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--color-band-yellow); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+.starter:disabled { opacity: 0.55; cursor: default; }
+.about { display: grid; gap: 3rem; padding: 4rem 1.5rem 5rem; max-width: 72rem; margin: 0 auto; font-size: 16px; line-height: 1.6; }
+@media (min-width: 60rem) { .about { grid-template-columns: 1fr 1fr; } }

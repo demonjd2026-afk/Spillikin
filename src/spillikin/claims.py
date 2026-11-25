@@ -42,6 +42,31 @@ CALL (claim) { UNWIND $targets AS id MATCH (c:Column {id: id}) CREATE (claim)-[:
 CALL (claim) { UNWIND $reach AS row MATCH (c:Column {id: row.id}) CREATE (claim)-[:REACHES {severity: row.severity}]->(c) }
 """
 
+# A refused attempt is kept too: who was stopped, by whom, and where their changes meet.
+REFUSE = """
+MERGE (agent:Agent {id: $agent})
+CREATE (agent)-[:HOLDS]->(claim:Claim {
+    id: $id, intent: $intent, change: $change, status: 'refused', opened_at: $now, expires_at: $expires_at
+})
+WITH claim
+CALL (claim) { UNWIND $targets AS id MATCH (c:Column {id: id}) CREATE (claim)-[:TARGETS]->(c) }
+CALL (claim) {
+    UNWIND $blockers AS b MATCH (other:Claim {id: b.claim})
+    CREATE (claim)-[:BLOCKED_BY {columns: b.columns, exposures: b.exposures}]->(other)
+}
+"""
+
+REFUSALS = """
+MATCH (agent:Agent)-[:HOLDS]->(claim:Claim {status: 'refused'}) WHERE claim.opened_at > $since
+RETURN claim.id AS id, agent.id AS agent, claim.intent AS intent, claim.change AS change, claim.opened_at AS opened_at,
+       COLLECT { MATCH (claim)-[:TARGETS]->(c:Column) RETURN c.id ORDER BY c.id } AS targets,
+       COLLECT {
+           MATCH (claim)-[b:BLOCKED_BY]->(other:Claim)<-[:HOLDS]-(holder:Agent)
+           RETURN {claim: other.id, agent: holder.id, intent: other.intent, columns: b.columns, exposures: b.exposures}
+       } AS blocked_by
+ORDER BY opened_at DESC, id
+"""
+
 RELEASE = """
 MATCH (agent:Agent)-[:HOLDS]->(claim:Claim {id: $id})
 WHERE claim.status = 'open'
@@ -59,7 +84,7 @@ ORDER BY opened_at, id
 """
 
 PRUNE = """
-MATCH (claim:Claim) WHERE claim.status = 'released' OR claim.expires_at <= $now
+MATCH (claim:Claim) WHERE claim.status IN ['released', 'refused'] OR claim.expires_at <= $now
 DETACH DELETE claim
 RETURN count(*) AS removed
 """
@@ -104,10 +129,15 @@ def open_claim(
          "columns": sorted(r.columns), "exposures": sorted(r.exposures)}
         for r in conn.execute(COLLISIONS, {"agent": agent, "now": now, "columns": footprint}).fetchall()
     ]
-    if collisions and not force:
-        return {"granted": False, "collisions": collisions, "radius": radius["summary"]}
-
     claim_id = f"clm_{uuid.uuid4().hex[:12]}"
+    if collisions and not force:
+        conn.execute(REFUSE, {
+            "agent": agent, "id": claim_id, "intent": intent, "change": change, "now": now,
+            "expires_at": now + ttl_seconds, "targets": radius["targets"],
+            "blockers": [{"claim": c["claim"], "columns": c["columns"], "exposures": c["exposures"]} for c in collisions],
+        })
+        return {"granted": False, "attempt": claim_id, "collisions": collisions, "radius": radius["summary"]}
+
     conn.execute(OPEN, {
         "agent": agent, "id": claim_id, "intent": intent, "change": change, "now": now,
         "expires_at": now + ttl_seconds, "contested": bool(collisions), "targets": radius["targets"],
@@ -130,6 +160,11 @@ def release_claim(conn: relate.Connection, claim_id: str, now: int | None = None
 def open_claims(conn: relate.Connection, now: int | None = None) -> list[dict[str, Any]]:
     now = int(time.time()) if now is None else now
     return [dict(row) for row in conn.execute(LIST, {"now": now}).fetchall()]
+
+
+def recent_refusals(conn: relate.Connection, now: int | None = None, window_seconds: int = 3600) -> list[dict[str, Any]]:
+    now = int(time.time()) if now is None else now
+    return [dict(row) for row in conn.execute(REFUSALS, {"since": now - window_seconds}).fetchall()]
 
 
 def prune_claims(conn: relate.Connection, now: int | None = None) -> int:

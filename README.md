@@ -5,7 +5,7 @@
 Built for the Relate by Neo4j Hackathon.
 
 **Try it in your browser, nothing to install: https://demonjd2026-afk.github.io/Spillikin/**
-The explorer loads the lineage graph into Relate's WebAssembly build and runs the same Cypher in the tab. Click a column to see what it moves.
+The explorer loads the lineage graph into Relate's WebAssembly build and runs the same Cypher in the tab. Click a column to see what it moves, or press **Play two agents colliding** to watch one agent's claim stop another's.
 
 ## Use case
 
@@ -29,6 +29,8 @@ Spillikin is for teams that let agents (or people in a hurry) edit SQL models. I
 | Is someone else already changing something that meets mine downstream? | `spillikin claim` | `claim_change` |
 | What did my edits actually do, compared with the last known graph? | `spillikin check` | `check_working_tree` |
 
+`spillikin live` puts all three on one page that updates as agents edit files and open claims.
+
 ## How it uses Relate
 
 **Mode: a directory store with the JSON snapshot codec**, at `examples/meridian/store/`.
@@ -50,6 +52,7 @@ Why this mode and not a single `.rl` file or `:memory:`:
 (:Owner)-[:OWNS]->(:Relation | :Exposure)
 (:Agent)-[:HOLDS]->(:Claim)-[:TARGETS]->(:Column)        what an agent intends to change
                    (:Claim)-[:REACHES]->(:Column)        everything that change reaches
+                   (:Claim)-[:BLOCKED_BY]->(:Claim)      a refused attempt, and whose claim stopped it
 ```
 
 **Why a graph.** Because the edges point downstream, the blast radius is one traversal. `SHAPES` followed by `HAS_COLUMN` is the hop that carries a filter or join key to every column of the model it shapes:
@@ -124,6 +127,15 @@ Other commands: `spillikin build` re-syncs the graph after you change SQL, `spil
 
 Run the tests with `pytest -q`.
 
+### Watch it live
+
+```bash
+cd web && npm ci && npm run build && cd ..     # once; needs Node 22 or later
+spillikin live                                  # http://127.0.0.1:4321
+```
+
+Leave the page open and, in another terminal, make the claims above or edit a model. The page shows each claim, each refused attempt with the columns where the two changes meet, and every edit on disk that the graph does not know about yet, within about a second. The server binds to 127.0.0.1, answers only to that name, serves only the explorer build, and never writes.
+
 ### Connect an agent
 
 Add this to your MCP client's configuration:
@@ -186,16 +198,19 @@ src/spillikin/
   workflow.py    build and check
   cli.py         command line
   mcp_server.py  MCP tools
+  live.py        local page server: watches the SQL and the store, streams changes to the explorer
 web/src/
   engine.ts      Relate WebAssembly: loads the graph, runs the Cypher, same rules as analysis.py
   Board.tsx      the lineage table; edges are drawn as sticks, measured from the rendered tiles
-  App.tsx        search, change kind, result panel
+  App.tsx        search, change kind, result panel, claims and live activity
+  live.ts        the event stream from `spillikin live`
 ```
 
 Decisions worth knowing about:
 
 - **Structural and semantic changes are different.** Dropping or renaming a column makes every model that names it fail to compile, so all of that model's columns break, including ones the column never fed. Changing a column's type or logic compiles fine and lets values drift. `--change` selects which.
 - **`check` uses the store as its baseline**, so it needs no git plumbing, and it re-extracts lineage from the working tree, so a model that no longer compiles is reported by the SQL analyser and not inferred.
+- **Refusals are kept.** A refused claim is stored with a `BLOCKED_BY` relationship to the claim that stopped it, so "who was stopped, by whom, and where" is a query.
 - **Nothing is guessed.** An unknown column, an undeclared source, a cycle or an unsupported template tag is an error with a location.
 - **Labels and relationship types in statement text are constants.** Everything that comes from a user or a file is passed as a Cypher parameter.
 
@@ -208,7 +223,7 @@ Decisions worth knowing about:
 
 ## Third-party software and data
 
-[Relate](https://github.com/relatedb/relate) (Apache-2.0), [sqlglot](https://github.com/tobymao/sqlglot) (MIT), [PyYAML](https://pyyaml.org) (MIT), the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) (MIT), pytest (MIT). The explorer uses React, Vite, Tailwind CSS and Motion (all MIT) and the Fraunces, Instrument Sans and JetBrains Mono typefaces (SIL Open Font License). Meridian is a fictional company; its schema and models were written for this project and contain no real data.
+[Relate](https://github.com/relatedb/relate) (Apache-2.0), [sqlglot](https://github.com/tobymao/sqlglot) (MIT), [PyYAML](https://pyyaml.org) (MIT), the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) (MIT), pytest (MIT). The explorer uses React, Vite, Tailwind CSS, Motion and Radix UI (all MIT), a tooltip adapted from shadcn/ui (MIT) and a number ticker adapted from Magic UI (MIT), and the Fraunces, Instrument Sans and JetBrains Mono typefaces (SIL Open Font License). Meridian is a fictional company; its schema and models were written for this project and contain no real data.
 
 ## License
 

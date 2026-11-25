@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { GraphFile, Radius } from './engine.ts';
 
 interface Segment { key: string; x1: number; y1: number; x2: number; y2: number; band: string; delay: number }
@@ -7,7 +8,10 @@ interface Segment { key: string; x1: number; y1: number; x2: number; y2: number;
 const BAND = { value: 'var(--color-band-red)', rows: 'var(--color-band-blue)', surface: 'var(--color-band-yellow)' } as const;
 
 /** The table: one lane per dependency depth, sources on the left, the things people look at on the right. */
-export function Board({ graph, radius, onPick }: { graph: GraphFile; radius: Radius | null; onPick: (id: string) => void }) {
+export function Board({ graph, radius, chips, meet, onPick }: {
+  graph: GraphFile; radius: Radius | null; chips: Map<string, string>; meet: string[]; onPick: (id: string) => void;
+}) {
+  const meeting = useMemo(() => new Set(meet), [meet]);
   const table = useRef<HTMLDivElement>(null);
   const [sticks, setSticks] = useState<Segment[]>([]);
   const still = useReducedMotion();
@@ -97,11 +101,20 @@ export function Board({ graph, radius, onPick }: { graph: GraphFile; radius: Rad
                   const mark = state.get(column.id)?.state ?? 'idle';
                   return (
                     <li key={column.id}>
-                      <button type="button" className="col" data-col={column.id} data-state={mark} data-dim={radius !== null}
-                        title={column.expression || column.description || column.id} onClick={() => onPick(column.id)}>
-                        <span className="truncate">{column.name}</span>
-                        {column.tests.length === 0 && mark !== 'idle' && mark !== 'target' && <span className="untested" aria-label="no test" />}
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="col" data-col={column.id} data-state={mark} data-dim={radius !== null}
+                            data-meet={meeting.has(column.id)} onClick={() => onPick(column.id)}>
+                            <span className="truncate">{column.name}</span>
+                            {chips.has(column.id) && <span className="chip">{chips.get(column.id)}</span>}
+                            {column.tests.length === 0 && mark !== 'idle' && mark !== 'target' && <span className="untested" aria-label="no test" />}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          {column.expression || column.description || 'raw column'}
+                          {column.tests.length > 0 && <div className="mt-1 opacity-70">tests: {column.tests.join(', ')}</div>}
+                        </TooltipContent>
+                      </Tooltip>
                     </li>
                   );
                 })}

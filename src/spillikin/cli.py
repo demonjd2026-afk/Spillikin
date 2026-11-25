@@ -14,7 +14,8 @@ from .analysis import UnknownColumn
 from .claims import ClaimError
 from .lineage import LineageError
 from .project import ProjectError
-from .store import Store, StoreError, from_store
+from .cli_export import export_payload
+from .store import Store, StoreError
 from .workflow import BuildError
 
 _MARK = {"breaks": "x", "blocked": "!", "drifts": "~"}
@@ -128,7 +129,7 @@ def cmd_claim(args: argparse.Namespace) -> int:
     if result["granted"]:
         text = f"granted {result['claim']} to {args.agent}: reaches {result['radius']['columns']} columns"
     else:
-        text = "refused: this change meets work already claimed"
+        text = f"refused ({result['attempt']}): this change meets work already claimed"
     for c in result["collisions"]:
         text += (f"\n  {c['agent']} holds {c['claim']} ({c['intent']})\n"
                  f"    shared columns: {', '.join(c['columns'][:6])}{' ...' if len(c['columns']) > 6 else ''}\n"
@@ -164,19 +165,21 @@ def cmd_export(args: argparse.Namespace) -> int:
     """The lineage graph as one JSON document, for the browser explorer to load into Relate's WebAssembly build."""
     _, store = _paths(args)
     with store.read() as conn:
-        graph = from_store(conn)
-        project = conn.execute("MATCH (p:Project) RETURN properties(p) AS p").single().p
-    payload = {
-        "project": project,
-        "nodes": {label: list(rows.values()) for label, rows in graph.nodes.items()},
-        "edges": {key: [{"src": s, "dst": d, "props": p} for (s, d), p in sorted(rows.items())] for key, rows in graph.edges.items()},
-    }
+        payload = export_payload(conn)
     text = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     if args.out:
         Path(args.out).write_text(text + "\n", encoding="utf-8")
         print(f"wrote {args.out}")
     else:
         print(text)
+    return 0
+
+
+def cmd_live(args: argparse.Namespace) -> int:
+    from .live import serve
+
+    root, store = _paths(args)
+    serve(root, store, args.port, Path(args.explorer) if args.explorer else None)
     return 0
 
 
@@ -228,6 +231,9 @@ def parser() -> argparse.ArgumentParser:
     p = add("export", cmd_export, "write the lineage graph as JSON")
     p.add_argument("--out")
     add("serve", cmd_serve, "run the MCP server on stdio")
+    p = add("live", cmd_live, "serve the explorer locally and update it as SQL and claims change")
+    p.add_argument("--port", type=int, default=4321)
+    p.add_argument("--explorer", help="path to the built explorer (default: web/dist)")
     return top
 
 
@@ -235,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         return args.handler(args)
-    except (ProjectError, LineageError, BuildError, StoreError, UnknownColumn, ClaimError, ValueError) as exc:
+    except (ProjectError, LineageError, BuildError, StoreError, UnknownColumn, ClaimError, ValueError, OSError) as exc:
         print(f"spillikin: {exc}", file=sys.stderr)
         return 2
 
