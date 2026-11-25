@@ -6,7 +6,6 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Engine, type Change, type Claim, type GraphFile, type Radius, type Refusal } from './engine.ts';
 import { useLive } from './live.ts';
 
-const REPO = 'https://github.com/demonjd2026-afk/Spillikin';
 const AGENTS = ['claude-code', 'codex'] as const;
 const STARTERS = [
   { id: 'raw.orders.status', note: 'a filter three models down' },
@@ -18,7 +17,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 type Loaded = { engine: Engine; graph: GraphFile };
 
-export function App() {
+export function Explorer() {
   const live = useLive();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -84,11 +83,7 @@ export function App() {
 
   return (
     <TooltipProvider>
-      <header className="flex flex-wrap items-end gap-x-10 gap-y-4 px-6 pt-5 pb-4">
-        <div>
-          <h1 className="wordmark text-[2.6rem] leading-none">Spillikin</h1>
-          <p className="mt-1 max-w-md text-[14px] opacity-80">In pick-up sticks you lift one stick without moving the pile. Pick a column and see what moves.</p>
-        </div>
+      <header className="toolbar">
         <div className="seg" role="group" aria-label="What happens to the column">
           <button type="button" aria-pressed={change === 'logic'} onClick={() => setChange('logic')}>Its values change</button>
           <button type="button" aria-pressed={change === 'drop'} onClick={() => setChange('drop')}>It is dropped or renamed</button>
@@ -96,7 +91,7 @@ export function App() {
         {live.snapshot
           ? <p className="live" role="status"><span className="pulse" />Watching {live.snapshot.project} on this machine</p>
           : <button type="button" className="starter" disabled={!loaded || playing} onClick={play}>{playing ? 'Playing…' : 'Play two agents colliding'}</button>}
-        <div className="relative ml-auto w-full max-w-xs">
+        <div className="relative w-full max-w-xs sm:ml-auto">
           <label className="sr-only" htmlFor="find">Find a column</label>
           <input id="find" className="field" placeholder="Find a column, e.g. paid revenue" value={query} autoComplete="off"
             onChange={(event) => setQuery(event.target.value)} />
@@ -192,7 +187,6 @@ export function App() {
         </aside>
       </div>
 
-      <About />
     </TooltipProvider>
   );
 }
@@ -245,38 +239,5 @@ function Result({ radius, canClaim, onClaim }: { radius: Radius; canClaim: boole
       <h3 className="heading mt-6">The traversal Relate just ran ({radius.engineMs.toFixed(1)} ms)</h3>
       <pre className="cypher mt-2">{radius.statement}</pre>
     </>
-  );
-}
-
-function About() {
-  return (
-    <footer className="about">
-      <div>
-        <h2 className="wordmark text-3xl">What you are looking at</h2>
-        <p className="mt-3">
-          Fifteen SQL models from a made-up retailer, read into a graph of columns. A red stick means a value flows from one column into another.
-          A blue stick means a column decides which rows a model has: a join key, a filter, a grouping. Search finds the red kind. The blue kind
-          is how a dashboard breaks without the changed column appearing anywhere in its query.
-        </p>
-        <p className="mt-3">
-          The graph lives in Relate. Here it runs inside this page; in a repository it is a folder next to the SQL that coding agents query
-          before they edit, and where they record what they are about to change so a second agent finds out before the two changes meet.
-        </p>
-      </div>
-      <div>
-        <h2 className="wordmark text-3xl">Run it on a project</h2>
-        <pre className="cypher mt-3">{`git clone ${REPO}.git
-cd Spillikin && pip install -e .
-export SPILLIKIN_PROJECT=examples/meridian
-
-spillikin impact raw.orders.status
-spillikin claim raw.payments.amount --agent claude-code \\
-  --intent "store amounts in minor units"
-spillikin check     # what did my edits reach?
-spillikin serve     # the same answers over MCP
-spillikin live      # this page, updating as files change`}</pre>
-        <p className="mt-3"><a href={REPO}>Source and documentation on GitHub</a>. Built for the Relate by Neo4j Hackathon.</p>
-      </div>
-    </footer>
   );
 }
