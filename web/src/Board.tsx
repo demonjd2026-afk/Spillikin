@@ -140,7 +140,7 @@ export function Board({ graph, radius, chips, meet, onPick }: {
           return (
             <motion.g key={`${radius?.target}:${radius?.change}:${s.key}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: s.delay, duration: still ? 0 : 0.25 }}>
-              <motion.line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke="var(--color-wood)" strokeWidth={2.6} strokeLinecap="round"
+              <motion.line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke="var(--stick)" strokeWidth={2.6} strokeLinecap="round"
                 initial={{ pathLength: still ? 1 : 0 }} animate={{ pathLength: 1 }} transition={{ delay: s.delay, duration: still ? 0 : 0.45, ease: 'easeOut' }} />
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={s.band} strokeWidth={2.6} />
               <line x1={c.x} y1={c.y} x2={d.x} y2={d.y} stroke={s.band} strokeWidth={2.6} />

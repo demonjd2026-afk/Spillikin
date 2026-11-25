@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform, type MotionValue } from 'motion/react';
-import type { PointerEvent, ReactNode } from 'react';
+import { useEffect, useState, type PointerEvent, type ReactNode } from 'react';
 import { Explorer } from './App.tsx';
 
 const REPO = 'https://github.com/demonjd2026-afk/Spillikin';
@@ -26,7 +26,7 @@ function Stick({ line, band, depth, index, x, y }: { line: number[]; band: strin
     <motion.g style={{ x: dx, y: dy }} initial={still ? false : { opacity: 0, rotate: (index % 2 ? 1 : -1) * 14, scale: 1.08 }}
       animate={{ opacity: 1, rotate: 0, scale: 1 }} transition={{ delay: 0.15 + index * 0.07, type: 'spring', stiffness: 120, damping: 13 }}>
       <line x1={x1} y1={y1 + 5} x2={x2} y2={y2 + 5} stroke="#0003" strokeWidth={8} strokeLinecap="round" />
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--color-wood)" strokeWidth={8} strokeLinecap="round" />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--stick)" strokeWidth={8} strokeLinecap="round" />
       <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={band} strokeWidth={8} />
       <line x1={c[0]} y1={c[1]} x2={d[0]} y2={d[1]} stroke={band} strokeWidth={8} />
     </motion.g>
@@ -52,9 +52,9 @@ function Pile() {
       <motion.g initial={still ? false : { opacity: 0, y: 0 }} animate={{ opacity: 1, y: still ? -26 : [0, 0, -26] }}
         transition={{ delay: 1, duration: 1.6, times: [0, 0.45, 1], ease: 'easeInOut' }}>
         <line x1={x1} y1={y1 + 30} x2={x2} y2={y2 + 30} stroke="#00000040" strokeWidth={9} strokeLinecap="round" />
-        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--color-wood)" strokeWidth={9} strokeLinecap="round" />
-        <line x1={x1 + 27} y1={y1 + 13.5} x2={x1 + 49} y2={y1 + 24.5} stroke="var(--color-band-yellow)" strokeWidth={9} />
-        <line x1={x2 - 49} y1={y2 - 24.5} x2={x2 - 27} y2={y2 - 13.5} stroke="var(--color-band-yellow)" strokeWidth={9} />
+        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--stick)" strokeWidth={9} strokeLinecap="round" />
+        <line x1={x1 + 27} y1={y1 + 13.5} x2={x1 + 49} y2={y1 + 24.5} stroke="var(--accent)" strokeWidth={9} />
+        <line x1={x2 - 49} y1={y2 - 24.5} x2={x2 - 27} y2={y2 - 13.5} stroke="var(--accent)" strokeWidth={9} />
       </motion.g>
     </svg>
   );
@@ -70,6 +70,28 @@ function Mark() {
       <path d="M9 11 31 30" stroke="#b8935a" strokeWidth="4.2" strokeLinecap="round" />
       <path d="M12.4 13.9 15.4 16.5M24.6 24.5 27.6 27.1" stroke="var(--color-band-blue)" strokeWidth="4.2" />
     </svg>
+  );
+}
+
+type Theme = 'dark' | 'light';
+
+/** Follows the system setting until the visitor chooses; the choice is remembered where storage is allowed. */
+function ThemeToggle() {
+  const [theme, setTheme] = useState<Theme>(() => (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'));
+  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+  const flip = () => {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    try { localStorage.setItem('spillikin-theme', next); } catch { /* private mode: the choice lasts for this visit */ }
+  };
+  return (
+    <button type="button" className="theme" onClick={flip} aria-label={theme === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+        {theme === 'dark'
+          ? <><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" /></>
+          : <path d="M20 14.2A8 8 0 0 1 9.8 4a8 8 0 1 0 10.2 10.2Z" />}
+      </svg>
+    </button>
   );
 }
 
@@ -112,6 +134,7 @@ export function Site() {
           <a href="#how">How it works</a>
           <a href="#run">Run it</a>
           <a className="button button-quiet" href={REPO}>GitHub</a>
+          <ThemeToggle />
         </div>
       </nav>
 

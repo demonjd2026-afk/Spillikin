@@ -179,7 +179,7 @@ export function Explorer() {
           )}
 
           {loaded && (
-            <p className="mt-8 border-t border-white/10 pt-4 text-[12.5px] opacity-70">
+            <p className="mt-8 border-t border-current/10 pt-4 text-[12.5px] opacity-70">
               {loaded.graph.nodes.Column.length} columns across {loaded.graph.nodes.Relation.length} tables and models, loaded into Relate {loaded.engine.version} running
               as WebAssembly in this tab in {Math.round(loaded.engine.loadMs)} ms. Nothing is sent anywhere.
             </p>
@@ -207,7 +207,7 @@ function Result({ radius, canClaim, onClaim }: { radius: Radius; canClaim: boole
 
       {radius.hits.length === 0 ? <p className="mt-5">Nothing downstream reads this column. It lifts out clean.</p> : (
         <ul className="mt-5 space-y-1.5 text-[14px]">
-          {broken > 0 && <li><span className="swatch bg-ink ring-1 ring-birch/60" />{broken} in {plural(radius.brokenModels.length, 'model')} that no longer compile</li>}
+          {broken > 0 && <li><span className="swatch bg-ink ring-1 ring-current/50" />{broken} in {plural(radius.brokenModels.length, 'model')} that no longer compile</li>}
           <li><span className="swatch bg-band-red" />{byValue} because a value they are built from changes</li>
           <li><span className="swatch bg-band-blue" />{byRows} because the rows they are computed over change</li>
           <li><span className="dot" />{untested} of them have no test</li>
