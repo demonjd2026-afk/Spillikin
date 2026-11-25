@@ -205,3 +205,5 @@ code { font-family: var(--font-mono); font-size: 0.88em; background: var(--well)
 .explorer-full { position: fixed; inset: 0; z-index: 60; background: var(--table); color: var(--fg); display: flex; flex-direction: column; }
 .explorer-full .stage { flex: 1; min-height: 0; overflow-y: auto; }
 .explorer-full .board-area { height: auto; min-height: 60vh; }
+
+.board-area[data-cine='true'] { overflow: hidden; }

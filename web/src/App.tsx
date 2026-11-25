@@ -75,7 +75,7 @@ export function Explorer() {
     if (!loaded) return;
     setPlaying(true);
     loaded.engine.clearClaims(); setTick((v) => v + 1); setChange('logic');
-    const step = async (run: () => void) => { if (!cancelled.current) { run(); await pause(1900); } };
+    const step = async (run: () => void) => { if (!cancelled.current) { run(); await pause(4200); } };
     await step(() => pick('raw.payments.amount'));
     await step(() => { loaded.engine.claim('claude-code', 'raw.payments.amount', 'logic', 'store payment amounts in minor units'); setTick((v) => v + 1); });
     await step(() => pick('raw.fx_rates.usd_rate'));
