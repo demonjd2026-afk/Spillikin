@@ -1,0 +1,11 @@
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
+dist/
+node_modules/
+
+# Relate runtime files. The snapshot (graph.json, manifest.json, .relate/schema) is committed;
+# the write-ahead log and lock files are rebuilt on first open.
+**/store/wal/
+**/store/.cypherlite.*

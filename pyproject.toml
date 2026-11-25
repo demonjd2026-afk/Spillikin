@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "spillikin"
+version = "0.1.0"
+description = "Column-level blast radius for SQL projects, held in a Relate graph that coding agents query before they edit."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+dependencies = [
+    "relate-db>=1.2,<2",
+    "sqlglot>=30,<31",
+    "pyyaml>=6,<7",
+    "mcp>=2.3,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9"]
+
+[project.scripts]
+spillikin = "spillikin.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spillikin"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,154 @@
+# Meridian is a fictional subscription retailer. All data shapes here are synthetic.
+project: meridian
+dialect: duckdb
+models_dir: models
+
+sources:
+  raw:
+    customers:
+      owner: platform
+      description: One row per registered customer, loaded from the app database.
+      columns:
+        customer_id: bigint
+        email: varchar
+        full_name: varchar
+        country_code: varchar
+        created_at: timestamp
+        marketing_opt_in: boolean
+    orders:
+      owner: platform
+      description: One row per checkout, including cancelled and test orders.
+      columns:
+        order_id: bigint
+        customer_id: bigint
+        status: varchar
+        is_test: boolean
+        ordered_at: timestamp
+        currency: varchar
+        shipping_amount: decimal
+        discount_amount: decimal
+    order_items:
+      owner: platform
+      columns:
+        order_item_id: bigint
+        order_id: bigint
+        product_id: bigint
+        quantity: integer
+        unit_price: decimal
+    products:
+      owner: merchandising
+      columns:
+        product_id: bigint
+        sku: varchar
+        category: varchar
+        unit_cost: decimal
+        is_active: boolean
+    payments:
+      owner: payments
+      description: Payment attempts from the processor webhook.
+      columns:
+        payment_id: bigint
+        order_id: bigint
+        method: varchar
+        amount: decimal
+        status: varchar
+        paid_at: timestamp
+    subscriptions:
+      owner: growth
+      columns:
+        subscription_id: bigint
+        customer_id: bigint
+        plan: varchar
+        monthly_price: decimal
+        started_at: timestamp
+        cancelled_at: timestamp
+    fx_rates:
+      owner: finance
+      description: Daily closing rate to USD per currency.
+      columns:
+        currency: varchar
+        rate_date: date
+        usd_rate: decimal
+
+models:
+  fct_orders:
+    owner: analytics
+    description: One row per completed, non-test order with USD amounts.
+    columns:
+      order_id: {description: Order key., tests: [unique, not_null]}
+      net_revenue_usd: {description: Revenue after discounts in USD., tests: [not_null]}
+      margin_usd: {description: Net revenue minus product cost in USD.}
+      is_fully_paid: {description: Settled payments cover the order total.}
+  fct_revenue_daily:
+    owner: finance
+    description: Daily revenue rollup used for reporting and the month-end close.
+    columns:
+      order_date: {tests: [unique, not_null]}
+      net_revenue_usd: {description: Sum of order net revenue in USD., tests: [not_null]}
+      paid_revenue_usd: {description: Revenue from fully paid orders only.}
+  dim_customers:
+    owner: analytics
+    description: One row per customer with order history rolled up.
+    columns:
+      customer_id: {tests: [unique, not_null]}
+      lifetime_revenue_usd: {description: Net revenue across all completed orders.}
+  customer_ltv:
+    owner: growth
+    description: Revenue and subscription value per customer.
+    columns:
+      customer_id: {tests: [unique]}
+      ltv_usd: {description: Order revenue plus subscription revenue to date.}
+  churn_features:
+    owner: data-science
+    description: Feature table for the churn model, one row per subscribed customer.
+  int_order_totals:
+    owner: analytics
+    columns:
+      order_id: {tests: [unique, not_null]}
+  stg_orders:
+    owner: analytics
+    columns:
+      order_id: {tests: [unique, not_null]}
+  stg_payments:
+    owner: analytics
+    columns:
+      payment_id: {tests: [unique]}
+
+exposures:
+  revenue_dashboard:
+    kind: dashboard
+    owner: finance
+    description: Executive revenue dashboard, refreshed hourly.
+    reads:
+      - fct_revenue_daily.order_date
+      - fct_revenue_daily.net_revenue_usd
+      - fct_revenue_daily.order_count
+      - fct_revenue_daily.margin_usd
+  month_end_close:
+    kind: export
+    owner: finance
+    description: Ledger export sent to accounting on the first business day.
+    reads:
+      - fct_revenue_daily.order_date
+      - fct_revenue_daily.paid_revenue_usd
+      - fct_orders.order_id
+      - fct_orders.net_revenue_usd
+  churn_model:
+    kind: ml_model
+    owner: data-science
+    description: Weekly churn-risk scoring job.
+    reads:
+      - churn_features.customer_id
+      - churn_features.days_since_last_order
+      - churn_features.orders_90d
+      - churn_features.plan
+      - churn_features.tenure_days
+  crm_sync:
+    kind: reverse_etl
+    owner: growth
+    description: Pushes customer value tiers to the CRM for campaign targeting.
+    reads:
+      - customer_ltv.customer_id
+      - customer_ltv.ltv_usd
+      - customer_ltv.value_tier
+      - dim_customers.email
