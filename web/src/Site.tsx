@@ -60,6 +60,19 @@ function Pile() {
   );
 }
 
+/** The mark: two crossed pick-up sticks on a birch tile, one banded for values, one for rows. */
+function Mark() {
+  return (
+    <svg viewBox="0 0 40 40" aria-hidden="true">
+      <rect width="40" height="40" rx="9" fill="var(--color-birch)" />
+      <path d="M8 31 32 9" stroke="#b8935a" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M11.6 27.7 14.6 25M25.4 15 28.4 12.3" stroke="var(--color-band-red)" strokeWidth="4.2" />
+      <path d="M9 11 31 30" stroke="#b8935a" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M12.4 13.9 15.4 16.5M24.6 24.5 27.6 27.1" stroke="var(--color-band-blue)" strokeWidth="4.2" />
+    </svg>
+  );
+}
+
 function Reveal({ children, className }: { children: ReactNode; className?: string }) {
   const still = useReducedMotion();
   return (
@@ -87,7 +100,13 @@ export function Site() {
   return (
     <>
       <nav className="nav">
-        <a href="#top" className="wordmark text-[1.55rem] no-underline">Spillikin</a>
+        <a href="#top" className="brand" aria-label="Spillikin, column lineage for coding agents">
+          <Mark />
+          <span>
+            <span className="wordmark brand-name">Spillikin</span>
+            <span className="brand-tag">column lineage for coding agents</span>
+          </span>
+        </a>
         <div className="nav-links">
           <a href="#explorer">Explorer</a>
           <a href="#how">How it works</a>
@@ -98,7 +117,7 @@ export function Site() {
 
       <header id="top" className="hero">
         <div>
-          <p className="kicker">Column-level lineage for coding agents, built on Relate</p>
+          <p className="kicker">Built on Relate, the embedded graph database from Neo4j</p>
           <h1 className="wordmark headline">Pull one column without moving the rest.</h1>
           <p className="lede">
             Spillikin reads a SQL project into a graph of columns. Before an agent edits a model, it asks the graph what the change reaches,
@@ -176,7 +195,7 @@ spillikin live      # this explorer, updating as files change`}</pre>
       </Reveal>
 
       <footer className="footer">
-        <p className="wordmark text-2xl">Spillikin</p>
+        <p className="brand"><Mark /><span className="wordmark brand-name">Spillikin</span></p>
         <p>Built by Jayanth Dolai for the <a href={HACKATHON}>Relate by Neo4j Hackathon</a>. Apache-2.0.</p>
         <p><a href={REPO}>GitHub</a><a href="https://www.linkedin.com/in/jayanth-dolai-7b115213a/">LinkedIn</a><a href="https://relatedb.ai">Relate</a></p>
       </footer>

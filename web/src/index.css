@@ -1,7 +1,7 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/fraunces';
-@import '@fontsource-variable/instrument-sans';
-@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/bricolage-grotesque/standard.css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 
 /* The palette is a game of pick-up sticks: a baize table, birch tiles, wooden sticks with painted bands. */
 @theme {
@@ -14,9 +14,9 @@
   --color-band-red: #d2402f;
   --color-band-blue: #2b65c7;
   --color-band-yellow: #f1be2e;
-  --font-display: 'Fraunces Variable', Georgia, serif;
-  --font-sans: 'Instrument Sans Variable', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --font-display: 'Bricolage Grotesque Variable', 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Geist Variable', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
 }
 
 
@@ -33,12 +33,13 @@ body {
 
 :focus-visible { outline: 2px solid var(--color-band-yellow); outline-offset: 2px; }
 
-.wordmark { font-family: var(--font-display); font-variation-settings: 'SOFT' 100, 'WONK' 1; font-weight: 560; letter-spacing: -0.03em; }
+/* Bricolage Grotesque narrows as it grows: display sizes use the condensed end of its width axis. */
+.wordmark { font-family: var(--font-display); font-variation-settings: 'opsz' 96, 'wdth' 88; font-weight: 700; letter-spacing: -0.015em; }
 
 .tile, .exposure { position: relative; z-index: 1; }
 .tile { background: var(--color-birch); color: var(--color-ink); border-radius: 5px; box-shadow: 0 1px 0 #fff6 inset, 0 3px 0 var(--color-baize-deep); }
 .tile-head { padding: 7px 10px 6px; border-bottom: 1px solid #18211d24; }
-.tile-name { font-family: var(--font-mono); font-size: 12.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-name { font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tile-meta { font-size: 11.5px; opacity: 0.62; }
 
 .col {
@@ -58,7 +59,7 @@ body {
 .exposure[data-hit='true'] { background: var(--color-birch); color: var(--color-ink); border: 1.5px solid var(--color-birch); }
 
 .panel { background: var(--color-baize-deep); border-left: 1px solid #f2e8d01f; }
-.count { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-weight: 500; font-size: 4.2rem; line-height: 0.95; letter-spacing: -0.04em; }
+.count { font-family: var(--font-display); font-variation-settings: 'opsz' 96, 'wdth' 80; font-weight: 750; font-size: 4.6rem; line-height: 0.92; letter-spacing: -0.04em; }
 .swatch { display: inline-block; width: 18px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 7px; }
 pre.cypher { font-family: var(--font-mono); font-size: 11px; line-height: 1.55; background: #0000002e; border-radius: 5px; padding: 11px 12px; white-space: pre-wrap; overflow-wrap: anywhere; color: #f2e8d0e0; }
 
@@ -93,6 +94,11 @@ code { font-family: var(--font-mono); font-size: 0.88em; background: #0000002e; 
 
 .nav { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding: 0.7rem clamp(1.25rem, 4vw, 3.5rem); background: #1e4a3ae6; backdrop-filter: blur(10px); border-bottom: 1px solid #f2e8d01a; }
+.brand { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; }
+.brand svg { width: 2.35rem; height: 2.35rem; flex: none; transition: transform 0.25s; }
+.brand:hover svg { transform: rotate(-8deg); }
+.brand-name { display: block; font-size: 1.5rem; line-height: 1; }
+.brand-tag { display: block; margin-top: 3px; font-size: 11.5px; letter-spacing: 0.01em; opacity: 0.72; }
 .nav-links { display: flex; align-items: center; gap: clamp(0.9rem, 2.4vw, 2rem); font-size: 14.5px; }
 .nav-links a { text-decoration: none; opacity: 0.85; transition: opacity 0.15s; }
 .nav-links a:hover { opacity: 1; }
@@ -109,13 +115,13 @@ code { font-family: var(--font-mono); font-size: 0.88em; background: #0000002e; 
 .hero { display: grid; align-items: center; gap: 2.5rem; max-width: 80rem; margin: 0 auto; padding: clamp(3rem, 8vw, 6.5rem) clamp(1.25rem, 4vw, 3.5rem) clamp(3rem, 6vw, 5rem); }
 @media (min-width: 62rem) { .hero { grid-template-columns: 1.08fr 0.92fr; } }
 .kicker { font-size: 15px; opacity: 0.8; margin-bottom: 1.1rem; }
-.headline { font-size: clamp(2.9rem, 7vw, 5.6rem); line-height: 0.98; text-wrap: balance; }
+.headline { font-size: clamp(3rem, 7.2vw, 5.9rem); line-height: 0.96; font-weight: 800; letter-spacing: -0.02em; font-variation-settings: 'opsz' 96, 'wdth' 86; text-wrap: balance; }
 .lede { margin-top: 1.5rem; max-width: 34rem; font-size: clamp(1.05rem, 1.5vw, 1.22rem); line-height: 1.55; opacity: 0.9; }
 .pile { width: 100%; max-width: 34rem; justify-self: center; overflow: visible; touch-action: pan-y; }
 
 .hook { display: grid; gap: 2rem; align-items: center; max-width: 80rem; margin: 0 auto; padding: 1rem clamp(1.25rem, 4vw, 3.5rem) clamp(3.5rem, 7vw, 6rem); font-size: 17px; line-height: 1.6; }
 @media (min-width: 62rem) { .hook { grid-template-columns: auto 1fr; gap: 4.5rem; } }
-.hook-figures { display: flex; align-items: baseline; gap: 1.1rem; font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: clamp(5rem, 13vw, 10.5rem); line-height: 0.8; letter-spacing: -0.05em; }
+.hook-figures { display: flex; align-items: baseline; gap: 1.1rem; font-family: var(--font-display); font-variation-settings: 'opsz' 96, 'wdth' 78; font-weight: 800; font-size: clamp(5rem, 13vw, 10.5rem); line-height: 0.8; letter-spacing: -0.05em; }
 .hook-figures span:first-child { opacity: 0.45; }
 .hook-figures span:last-child { color: var(--color-band-yellow); }
 .hook-vs { font-family: var(--font-sans); font-size: 1rem; letter-spacing: 0; opacity: 0.7; }
@@ -136,14 +142,14 @@ code { font-family: var(--font-mono); font-size: 0.88em; background: #0000002e; 
 @media (min-width: 56rem) { .questions { grid-template-columns: repeat(3, 1fr); } }
 .question { background: var(--color-birch); color: var(--color-ink); border-radius: 10px; padding: 1.5rem; box-shadow: 0 5px 0 var(--color-baize-deep); display: flex; flex-direction: column; gap: 0.8rem; transition: transform 0.18s; }
 .question:hover { transform: translateY(-4px) rotate(-0.4deg); }
-.question h3 { font-family: var(--font-display); font-size: 1.45rem; line-height: 1.15; font-weight: 560; letter-spacing: -0.02em; }
+.question h3 { font-family: var(--font-display); font-variation-settings: 'opsz' 40, 'wdth' 92; font-size: 1.45rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
 .question p { font-size: 15px; line-height: 1.55; flex: 1; }
 .question .cypher { background: var(--color-ink); color: var(--color-birch); }
 
 .pipeline { display: grid; gap: 0.9rem; list-style: none; padding: 0; margin: 0; }
 @media (min-width: 56rem) { .pipeline { grid-template-columns: repeat(4, 1fr); gap: 0; } }
 .pipeline li { position: relative; padding: 1.2rem 1.3rem 1.3rem; border: 1.5px solid #f2e8d04d; border-radius: 10px; display: flex; flex-direction: column; gap: 0.45rem; }
-.pipeline strong { font-family: var(--font-display); font-size: 1.3rem; font-weight: 560; }
+.pipeline strong { font-family: var(--font-display); font-variation-settings: 'opsz' 40, 'wdth' 92; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.015em; }
 .pipeline span { font-size: 14.5px; line-height: 1.5; opacity: 0.85; }
 @media (min-width: 56rem) {
   .pipeline li { border-radius: 0; border-right-width: 0; }

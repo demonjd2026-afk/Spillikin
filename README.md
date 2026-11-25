@@ -223,7 +223,7 @@ Decisions worth knowing about:
 
 ## Third-party software and data
 
-[Relate](https://github.com/relatedb/relate) (Apache-2.0), [sqlglot](https://github.com/tobymao/sqlglot) (MIT), [PyYAML](https://pyyaml.org) (MIT), the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) (MIT), pytest (MIT). The explorer uses React, Vite, Tailwind CSS, Motion and Radix UI (all MIT), a tooltip adapted from shadcn/ui (MIT) and a number ticker adapted from Magic UI (MIT), and the Fraunces, Instrument Sans and JetBrains Mono typefaces (SIL Open Font License). Meridian is a fictional company; its schema and models were written for this project and contain no real data.
+[Relate](https://github.com/relatedb/relate) (Apache-2.0), [sqlglot](https://github.com/tobymao/sqlglot) (MIT), [PyYAML](https://pyyaml.org) (MIT), the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) (MIT), pytest (MIT). The explorer uses React, Vite, Tailwind CSS, Motion and Radix UI (all MIT), a tooltip adapted from shadcn/ui (MIT) and a number ticker adapted from Magic UI (MIT), and the Bricolage Grotesque, Geist and Geist Mono typefaces (SIL Open Font License). Meridian is a fictional company; its schema and models were written for this project and contain no real data.
 
 ## License
 
