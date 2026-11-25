@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import random
+import shutil
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -82,6 +83,13 @@ class Store:
                     raise StoreError(f"cannot open {self.path}: {exc}") from exc
                 time.sleep(delay + random.uniform(0, delay))
                 delay = min(delay * 2, 0.5)
+
+    def discard(self) -> None:
+        """Remove the files Relate wrote, and only those: the snapshot, its schema, the log and the lock files."""
+        for name in ("graph.json", "manifest.json", ".cypherlite.lock", ".cypherlite.writer"):
+            (self.path / name).unlink(missing_ok=True)
+        for name in (".relate", "wal"):
+            shutil.rmtree(self.path / name, ignore_errors=True)
 
     def _hydrate(self) -> None:
         """A fresh clone holds only the snapshot; one writable open rebuilds the WAL beside it."""

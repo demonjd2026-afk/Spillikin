@@ -148,11 +148,11 @@ def cmd_release(args: argparse.Namespace) -> int:
 
 
 def cmd_claims(args: argparse.Namespace) -> int:
-    _, store = _paths(args)
+    root, store = _paths(args)
     if args.prune:
-        with store.write() as conn:
-            removed = claims.prune_claims(conn)
-        _emit(args, {"removed": removed}, f"removed {removed} finished claims")
+        result = workflow.prune(root, store)
+        note = "; store is back to its built state" if result["snapshot_restored"] else f"; {result['remaining']} still open"
+        _emit(args, result, f"removed {result['removed']} finished claims{note}")
         return 0
     with store.read() as conn:
         held = claims.open_claims(conn)

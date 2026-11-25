@@ -142,6 +142,8 @@ spillikin impact seed.raw_orders.id --project .
 
 Models, seeds, sources, column tests and exposures come from the manifest; seed and source columns come from the catalog. Tested against dbt's public [jaffle_shop](https://github.com/dbt-labs/jaffle_shop) project (dbt-core 1.12.7, dbt-duckdb 1.11.1): 8 relations, 38 columns, and `seed.raw_orders.id` reaches 17 columns, 14 of them through joins. It also reported that `customers.total_order_amount` is documented in that project but no longer output by the model.
 
+Also run on the larger [jaffle-shop](https://github.com/dbt-labs/jaffle-shop) project, whose models use macros, `dbt_utils`, window functions and CTEs named after the models they wrap: 19 relations, 112 columns, 87 value edges, and dropping `ecom.raw_orders.id` reaches 46 columns, 10 of which stop compiling. To build it locally that project's `require-dbt-version` was relaxed to run on dbt-core 1.12 and its seeds were loaded with `--vars '{load_source_data: true}'`.
+
 ### Watch it live
 
 ```bash
@@ -180,7 +182,7 @@ Tools: `blast_radius`, `provenance`, `find_columns`, `claim_change`, `release_cl
 | `examples/meridian/models/` | The 15 SQL models the graph is built from |
 | `web/public/graph.json` | The same graph exported for the browser explorer |
 
-The write-ahead log and lock files are not committed. Relate recreates them the first time the store is opened for writing, which `spillikin` does for you on a fresh clone. Claims are runtime state: they live in the same store so they can be joined to lineage, and the committed snapshot holds none. Relate rewrites the snapshot when claims are made, so after trying the claim commands git will show the store as modified; `git checkout examples/meridian/store` puts the committed snapshot back.
+The write-ahead log and lock files are not committed. Relate recreates them the first time the store is opened for writing, which `spillikin` does for you on a fresh clone. Claims are runtime state: they live in the same store so they can be joined to lineage, and the committed snapshot holds none. Relate rewrites the snapshot when claims are made, so git shows the store as modified while claims exist. `spillikin claims --prune` removes finished claims, and once none are left it rebuilds the store, which returns the snapshot to the committed bytes.
 
 ## Design
 
@@ -216,7 +218,7 @@ Decisions worth knowing about:
 ## Limits
 
 - Models must be single `SELECT` statements. In a native project only `ref()`, `source()` and `config()` template tags are understood; other Jinja is refused, not skipped. For anything more, compile with dbt and point Spillikin at the dbt project.
-- The dbt reader has been run on one small public project. Exposures in dbt name models, not columns, so every column of the model is treated as read.
+- The dbt reader has been run on two public projects (8 and 19 relations), both on DuckDB; other adapters' SQL dialects are parsed by sqlglot but have not been exercised here. Exposures in dbt name models, not columns, so every column of the model is treated as read.
 - Column lineage through table functions and `UNNEST` is not traced.
 - Sources must declare their columns in `spillikin.yml` (native) or appear in dbt's catalog.
 - Tested from a fresh clone on Linux (Python 3.13) and macOS on Apple silicon, with relate-db 1.2.0, sqlglot 30.35 and mcp 2.3; the explorer in headless Chromium with Node 22.

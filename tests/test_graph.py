@@ -91,6 +91,24 @@ def test_claims_collide_when_their_reach_meets_downstream(meridian):
     assert retry["granted"]
 
 
+def test_pruning_the_last_claim_restores_the_built_snapshot(meridian):
+    root, store = meridian
+    built = (store.path / "graph.json").read_bytes()
+    with store.write() as conn:
+        first = claims.open_claim(conn, "agent-a", ["raw.payments.amount"], "minor units")
+        second = claims.open_claim(conn, "agent-a", ["raw.orders.status"], "new statuses")
+        claims.open_claim(conn, "agent-b", ["raw.fx_rates.usd_rate"], "refused attempt")
+        claims.release_claim(conn, first["claim"])
+    partial = workflow.prune(root, store)
+    assert partial == {"removed": 2, "remaining": 1, "snapshot_restored": False}, "an open claim is never thrown away"
+    with store.write() as conn:
+        claims.release_claim(conn, second["claim"])
+    assert workflow.prune(root, store)["snapshot_restored"]
+    assert (store.path / "graph.json").read_bytes() == built
+    with store.read() as conn:
+        assert analysis.blast_radius(conn, ["raw.orders.status"])["summary"]["columns"] == 48
+
+
 def test_expired_claims_do_not_block(meridian):
     _, store = meridian
     with store.write() as conn:

@@ -37,6 +37,27 @@ def build(root: Path | str, store: stores.Store) -> dict[str, Any]:
     }
 
 
+def prune(root: Path | str, store: stores.Store) -> dict[str, Any]:
+    """Delete finished claims. When none are left, rebuild the store so the snapshot is the committed one again.
+
+    Relate rewrites its snapshot whenever claims come and go, and a rewritten snapshot differs byte for byte from
+    a freshly built one even when the graph is the same. A fresh build is reproducible, so rebuilding returns the
+    file git knows, and trying the claim commands leaves the working tree clean.
+    """
+    with store.write() as conn:
+        removed = claims.prune_claims(conn)
+        remaining = conn.execute("MATCH (c:Claim) RETURN count(c) AS n").single().n
+    restored = False
+    if remaining == 0:
+        project = projects.load(root)
+        extracted, failures = lineage.extract_project(project)
+        if not failures:  # with broken SQL on disk there is nothing trustworthy to rebuild from
+            store.discard()
+            build(root, store)
+            restored = True
+    return {"removed": removed, "remaining": remaining, "snapshot_restored": restored}
+
+
 def check(root: Path | str, store: stores.Store, agent: str | None = None) -> dict[str, Any]:
     """Compare the working tree with the committed graph and report what the edits reach.
 

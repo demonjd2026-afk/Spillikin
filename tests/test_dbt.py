@@ -22,7 +22,8 @@ def dbt_project(tmp_path: Path) -> Path:
             "seed.tiny.orders": node("seed", "orders"),
             "model.tiny.stg_orders": node("model", "stg_orders", compiled_code='select id as order_id, amount, status from "db"."main"."orders" where status <> \'void\'',
                                           columns={"order_id": {"description": "Order key."}, "ghost": {"description": "Removed long ago."}}),
-            "model.tiny.revenue": node("model", "revenue", compiled_code='with o as (select * from "db"."main"."stg_orders") select sum(amount) as total from o'),
+            # the CTE is named after the model it wraps, as dbt projects commonly do
+            "model.tiny.revenue": node("model", "revenue", compiled_code='with stg_orders as (select * from "db"."main"."stg_orders") select sum(amount) as total from stg_orders'),
             "test.tiny.unique_order": {"resource_type": "test", "name": "unique_stg_orders_order_id", "attached_node": "model.tiny.stg_orders",
                                        "column_name": "order_id", "test_metadata": {"name": "unique"}},
         },
@@ -54,3 +55,21 @@ def test_a_missing_catalog_says_what_to_run(dbt_project: Path):
     (dbt_project / "target" / "catalog.json").unlink()
     with pytest.raises(ProjectError, match="dbt docs generate"):
         project.load(dbt_project)
+
+
+def test_a_seed_loaded_into_a_declared_source_is_one_relation(dbt_project: Path):
+    path = dbt_project / "target" / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["sources"]["source.tiny.shop.orders"] = {"resource_type": "source", "source_name": "shop", "name": "orders",
+                                                      "relation_name": '"db"."main"."orders"', "columns": {}}
+    path.write_text(json.dumps(manifest))
+    catalog = json.loads((dbt_project / "target" / "catalog.json").read_text())
+    catalog["sources"]["source.tiny.shop.orders"] = catalog["nodes"]["seed.tiny.orders"]
+    (dbt_project / "target" / "catalog.json").write_text(json.dumps(catalog))
+
+    loaded = project.load(dbt_project)
+    assert list(loaded.sources) == ["shop.orders"]
+    store = Store(dbt_project / "store")
+    workflow.build(dbt_project, store)
+    with store.read() as conn:
+        assert {row["id"] for row in analysis.blast_radius(conn, ["shop.orders.amount"])["impacted"]} >= {"stg_orders.amount", "revenue.total"}

@@ -40,6 +40,12 @@ def _key(relation_name: str, dialect: str) -> tuple[str, str]:
     return (table.db.lower(), table.name.lower())
 
 
+def _ident(model: str) -> str:
+    """What a model is called inside rewritten SQL. dbt projects routinely name a CTE after the model it wraps
+    (`with orders as (select * from <orders model>)`), so the bare model name would be read as the CTE itself."""
+    return f"dbt__{model.lower()}"
+
+
 def _owner(node: dict[str, Any]) -> str:
     return str((node.get("meta") or {}).get("owner") or (node.get("config") or {}).get("group") or node.get("group") or "")
 
@@ -79,7 +85,11 @@ def load(root: Path | str) -> Project:
 
     upstream = [(uid, n) for uid, n in manifest["nodes"].items() if n["resource_type"] == "seed"]
     upstream += list(manifest.get("sources", {}).items())
+    declared = {_key(n["relation_name"], dialect) for n in manifest.get("sources", {}).values() if n.get("relation_name")}
     for uid, node in sorted(upstream):
+        # A seed loaded into a table that a source also declares is one table; the source is what models read.
+        if node["resource_type"] == "seed" and _key(node["relation_name"], dialect) in declared:
+            continue
         rid = f"{node.get('source_name', 'seed')}.{node['name']}".lower()
         cols = columns(uid, node, from_catalog=True) or columns(uid, node, from_catalog=False)
         if not cols:
@@ -94,7 +104,7 @@ def load(root: Path | str) -> Project:
     for uid, node in compiled.items():
         ids[uid] = node["name"].lower()
         if node.get("relation_name"):
-            by_key[_key(node["relation_name"], dialect)] = node["name"].lower()
+            by_key[_key(node["relation_name"], dialect)] = _ident(node["name"])
 
     for uid, node in sorted(compiled.items()):
         name = node["name"].lower()
@@ -113,7 +123,7 @@ def load(root: Path | str) -> Project:
         path = node.get("original_file_path", "")
         parts = Path(path).parts
         models[name] = Relation(
-            id=name, ident=name, kind="model", layer="/".join(parts[1:-1]) or "model", path=path, owner=_owner(node),
+            id=name, ident=_ident(name), kind="model", layer="/".join(parts[1:-1]) or "model", path=path, owner=_owner(node),
             description=str(node.get("description", "")), sql=tree.sql(dialect=dialect),
             columns=columns(uid, node, from_catalog=False),
         )
