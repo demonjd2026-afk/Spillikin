@@ -1,15 +1,32 @@
-# spillikin
+# Spillikin
 
-[![Spillikin: pull one column without moving the rest. Relate by Neo4j Hackathon.](docs/demo-thumbnail.png)](https://demonjd2026-afk.github.io/Spillikin/)
+[![Spillikin demo video: pull one column without moving the rest. Relate by Neo4j Hackathon.](docs/demo-thumbnail.png)](https://youtu.be/w529NDxRyRk)
 
-**Pull one column without moving the rest.** A spillikin is a stick in the game of pick-up sticks: you win by lifting one out without disturbing the pile. Spillikin does that for SQL. It turns a SQL project into a column-level lineage graph in [Relate](https://relatedb.ai), so a coding agent can ask what a change reaches, and find out when another agent's change reaches the same place.
+**Pull one column without moving the rest.** Spillikin turns a SQL project into a column-level lineage graph stored in [Relate](https://relatedb.ai). Before a coding agent edits a model, it asks the graph what the change reaches, and whether another agent's change reaches the same place.
 
-Built for the Relate by Neo4j Hackathon.
+A spillikin is a stick in the game of pick-up sticks: you win by lifting one out without disturbing the pile.
 
-**Try it in your browser, nothing to install: https://demonjd2026-afk.github.io/Spillikin/**
-The explorer loads the lineage graph into Relate's WebAssembly build and runs the same Cypher in the tab. Click a column to see what it moves, or press **Play two agents colliding** to watch one agent's claim stop another's.
+| | |
+|---|---|
+| **Demo video (2 minutes)** | https://youtu.be/w529NDxRyRk |
+| **Live explorer, nothing to install** | https://demonjd2026-afk.github.io/Spillikin/ |
+| **Built for** | [Relate by Neo4j Hackathon](https://relate.devpost.com/) |
 
-## Use case
+## Contents
+
+- [The problem](#the-problem)
+- [What Spillikin does](#what-spillikin-does)
+- [Try it](#try-it)
+- [For judges: where to look](#for-judges-where-to-look)
+- [How it uses Relate](#how-it-uses-relate)
+- [Setup and run](#setup-and-run)
+- [Where the data lives](#where-the-data-lives)
+- [Architecture](#architecture)
+- [How it is verified](#how-it-is-verified)
+- [Limits](#limits)
+- [Third-party software and data](#third-party-software-and-data)
+
+## The problem
 
 A coding agent is asked to change how `raw.orders.status` is populated. It searches the repository, finds one model that selects the column, edits it, and reports success.
 
@@ -23,7 +40,9 @@ logic raw.orders.status
 
 One column is reached by value. Forty-seven are reached because the column decides which rows exist. Text search and file-level dependency graphs see the first kind only.
 
-Spillikin is for teams that let agents (or people in a hurry) edit SQL models. It answers three questions:
+## What Spillikin does
+
+It is for teams that let agents (or people in a hurry) edit SQL models. It answers three questions, from the command line or as MCP tools:
 
 | Question | Command | MCP tool |
 |---|---|---|
@@ -32,6 +51,33 @@ Spillikin is for teams that let agents (or people in a hurry) edit SQL models. I
 | What did my edits actually do, compared with the last known graph? | `spillikin check` | `check_working_tree` |
 
 `spillikin live` puts all three on one page that updates as agents edit files and open claims.
+
+## Try it
+
+**In the browser.** Open https://demonjd2026-afk.github.io/Spillikin/. The page loads the lineage graph into Relate's WebAssembly build and runs the same Cypher in the tab. Click a column to see what it moves, switch to **It is dropped or renamed** to see which models stop compiling, or press **Play two agents colliding** to watch one agent's claim stop another's.
+
+**On your machine.** Python 3.10 or later, no account, API key or server:
+
+```bash
+git clone https://github.com/demonjd2026-afk/Spillikin.git && cd Spillikin
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+spillikin impact raw.orders.status --project examples/meridian
+```
+
+The graph is committed with the code, so the last command answers immediately. [Setup and run](#setup-and-run) has the full walkthrough.
+
+**From an agent.** Add the MCP server to Claude Desktop or any MCP client: see [Connect an agent](#connect-an-agent).
+
+## For judges: where to look
+
+| Judging criterion | Where to see it |
+|---|---|
+| Relate and connected context | [How it uses Relate](#how-it-uses-relate): the graph model, the traversal, and the Relate features used. The Cypher is in [`src/spillikin/analysis.py`](src/spillikin/analysis.py) and [`claims.py`](src/spillikin/claims.py). |
+| Functionality and completeness | Every command in [Setup and run](#setup-and-run) works on the committed store. [How it is verified](#how-it-is-verified) lists the tests and CI checks. |
+| Usefulness | [The problem](#the-problem): a change that text search reports as one model reaches 48 columns and 4 things people look at. |
+| Documentation and reproducibility | [Try it](#try-it) needs four commands and no account. [Where the data lives](#where-the-data-lives) and [Limits](#limits) say what is in the repository and what is not supported. |
+| Creativity | Row membership as a relationship (`SHAPES`), so a filter or join key reaches every column of the model it shapes, and claims between agents stored in the same graph as the lineage. |
 
 ## How it uses Relate
 
@@ -127,7 +173,7 @@ git checkout examples/meridian/models
 
 Other commands: `spillikin build` re-syncs the graph after you change SQL, `spillikin export` writes it as JSON, and every command takes `--json`.
 
-Run the tests with `pytest -q`.
+Run the tests with `pytest -q` (27 tests).
 
 ### Use it on a dbt project
 
@@ -184,7 +230,7 @@ Tools: `blast_radius`, `provenance`, `find_columns`, `claim_change`, `release_cl
 
 The write-ahead log and lock files are not committed. Relate recreates them the first time the store is opened for writing, which `spillikin` does for you on a fresh clone. Claims are runtime state: they live in the same store so they can be joined to lineage, and the committed snapshot holds none. Relate rewrites the snapshot when claims are made, so git shows the store as modified while claims exist. `spillikin claims --prune` removes finished claims, and once none are left it rebuilds the store, which returns the snapshot to the committed bytes.
 
-## Design
+## Architecture
 
 ![Spillikin architecture: SQL or a compiled dbt project is read by the lineage engine into a Relate directory store, which the CLI, MCP server, live server and browser explorer query](docs/architecture.png)
 
@@ -196,14 +242,15 @@ src/spillikin/
   store.py       opening Relate, schema, and a diff-based sync so an unchanged project writes nothing
   analysis.py    blast radius, provenance, search: the Cypher lives here
   claims.py      claims and collision detection
-  workflow.py    build and check
+  workflow.py    build, check and prune
   cli.py         command line
   mcp_server.py  MCP tools
   live.py        local page server: watches the SQL and the store, streams changes to the explorer
 web/src/
   engine.ts      Relate WebAssembly: loads the graph, runs the Cypher, same rules as analysis.py
-  Board.tsx      the lineage table; edges are drawn as sticks, measured from the rendered tiles
-  App.tsx        search, change kind, result panel, claims and live activity
+  Board.tsx      the lineage board: one lane per model, curved arrows measured from the rendered tiles, step-by-step playback
+  App.tsx        the explorer: search, change kind, result panel, claims and live activity
+  Site.tsx       the page around the explorer, with light and dark themes
   live.ts        the event stream from `spillikin live`
 ```
 
@@ -215,13 +262,23 @@ Decisions worth knowing about:
 - **Nothing is guessed.** An unknown column, an undeclared source, a cycle or an unsupported template tag is an error with a location.
 - **Labels and relationship types in statement text are constants.** Everything that comes from a user or a file is passed as a Cypher parameter.
 
+## How it is verified
+
+- **27 tests** (`pytest -q`) cover lineage extraction, the graph sync, blast radius, claims, the live server and the dbt reader. One test starts six processes that race to claim the same column and checks that exactly one is granted.
+- **Continuous integration** runs on every push and fails if any of these is false:
+  - the committed Relate store matches a fresh build from the SQL;
+  - `web/public/graph.json` matches an export of that store;
+  - the browser engine (Relate WebAssembly) and the Python engine give the same blast radius for every column, for both kinds of change: 270 comparisons over 135 columns.
+- **Fresh clone** tested on Linux (Python 3.13) and macOS on Apple silicon, with relate-db 1.2.0, sqlglot 30.35 and mcp 2.3. The explorer was tested in headless Chromium with Node 22.
+- **MCP** tested in Claude Desktop: `blast_radius` returned the same 48 and 59 columns as the command line, and the claim, refusal and release flow ran through the server.
+- **dbt reader** run on two public dbt projects; results are under [Use it on a dbt project](#use-it-on-a-dbt-project).
+
 ## Limits
 
 - Models must be single `SELECT` statements. In a native project only `ref()`, `source()` and `config()` template tags are understood; other Jinja is refused, not skipped. For anything more, compile with dbt and point Spillikin at the dbt project.
 - The dbt reader has been run on two public projects (8 and 19 relations), both on DuckDB; other adapters' SQL dialects are parsed by sqlglot but have not been exercised here. Exposures in dbt name models, not columns, so every column of the model is treated as read.
 - Column lineage through table functions and `UNNEST` is not traced.
 - Sources must declare their columns in `spillikin.yml` (native) or appear in dbt's catalog.
-- Tested from a fresh clone on Linux (Python 3.13) and macOS on Apple silicon, with relate-db 1.2.0, sqlglot 30.35 and mcp 2.3; the explorer in headless Chromium with Node 22.
 
 ## Third-party software and data
 
