@@ -167,25 +167,6 @@ Add this to your MCP client's configuration:
 
 Tools: `blast_radius`, `provenance`, `find_columns`, `claim_change`, `release_claim`, `open_claims`, `check_working_tree`. Each call opens the store for the length of that call, so every agent session can run its own copy of the server against the same store.
 
-For ad hoc Cypher, Relate's own read-only MCP server can serve the same store (run one `spillikin` command first so the write-ahead log exists):
-
-```bash
-relate serve --mcp stdio --database examples/meridian/store --read-only
-```
-
-### Run the explorer locally
-
-Requires Node 22 or later.
-
-```bash
-cd web
-npm ci
-npm run dev          # http://localhost:5173
-npm run parity       # browser engine vs Python engine, every column, both change kinds
-```
-
-The explorer reimplements the blast-radius rules in TypeScript on top of Relate WebAssembly. `npm run parity` runs both engines over all 135 columns for both kinds of change (270 blast radii) and fails on any difference; CI runs it on every push.
-
 ## Where the data lives
 
 | Path | What it is |
@@ -236,7 +217,7 @@ Decisions worth knowing about:
 - The dbt reader has been run on one small public project. Exposures in dbt name models, not columns, so every column of the model is treated as read.
 - Column lineage through table functions and `UNNEST` is not traced.
 - Sources must declare their columns in `spillikin.yml` (native) or appear in dbt's catalog.
-- Tested on Linux with Python 3.13, relate-db 1.2.0, sqlglot 30.35, mcp 2.3; the explorer in headless Chromium with Node 22. The `relate serve` command above is taken from the Relate documentation.
+- Tested from a fresh clone on Linux (Python 3.13) and macOS on Apple silicon, with relate-db 1.2.0, sqlglot 30.35 and mcp 2.3; the explorer in headless Chromium with Node 22.
 
 ## Third-party software and data
 

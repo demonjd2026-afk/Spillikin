@@ -27,6 +27,10 @@ export function Explorer() {
   const [meet, setMeet] = useState<string[]>([]);
   const [tick, setTick] = useState(0); // bumps after every claim so lists re-read the graph
   const [playing, setPlaying] = useState(false);
+  const [focus, setFocus] = useState(true);
+  const [zoom, setZoom] = useState<'fit' | number>('fit');
+  const [full, setFull] = useState(false);
+  const step = (by: number) => setZoom((z) => Math.min(1.4, Math.max(0.4, Math.round(((z === 'fit' ? 1 : z) + by) * 10) / 10)));
   const cancelled = useRef(false);
 
   useEffect(() => {
@@ -41,6 +45,13 @@ export function Explorer() {
     return () => { current = false; };
   }, [live.graphVersion]);
   useEffect(() => () => { cancelled.current = true; }, []);
+  useEffect(() => {
+    if (!full) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setFull(false); };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', close);
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', close); };
+  }, [full]);
 
   const known = useMemo(() => new Set(loaded?.graph.nodes.Column.map((column) => column.id)), [loaded]);
   const radius = useMemo<Radius | null>(
@@ -83,6 +94,7 @@ export function Explorer() {
 
   return (
     <TooltipProvider>
+      <div className={full ? 'explorer explorer-full' : 'explorer'}>
       <header className="toolbar">
         <div className="seg" role="group" aria-label="What happens to the column">
           <button type="button" aria-pressed={change === 'logic'} onClick={() => setChange('logic')}>Its values change</button>
@@ -91,6 +103,13 @@ export function Explorer() {
         {live.snapshot
           ? <p className="live" role="status"><span className="pulse" />Watching {live.snapshot.project} on this machine</p>
           : <button type="button" className="starter" disabled={!loaded || playing} onClick={play}>{playing ? 'Playing…' : 'Play two agents colliding'}</button>}
+        <div className="view" role="group" aria-label="View">
+          <button type="button" aria-pressed={focus} onClick={() => setFocus((on) => !on)} title="Hide tables and columns the change does not touch">Only what moves</button>
+          <button type="button" onClick={() => step(-0.1)} aria-label="Zoom out">−</button>
+          <button type="button" aria-pressed={zoom === 'fit'} onClick={() => setZoom('fit')} title="Scale the board to the space available">Fit</button>
+          <button type="button" onClick={() => step(0.1)} aria-label="Zoom in">+</button>
+          <button type="button" aria-pressed={full} onClick={() => setFull((on) => !on)}>{full ? 'Exit full screen' : 'Full screen'}</button>
+        </div>
         <div className="relative w-full max-w-xs sm:ml-auto">
           <label className="sr-only" htmlFor="find">Find a column</label>
           <input id="find" className="field" placeholder="Find a column, e.g. paid revenue" value={query} autoComplete="off"
@@ -105,14 +124,15 @@ export function Explorer() {
         </div>
       </header>
 
-      <div className="stage flex flex-col lg:flex-row">
-        <main className="min-h-[55vh] min-w-0 flex-1 overflow-auto px-6 pb-8">
+      <div className="stage">
+        <main className="board-area">
+          <p className="key"><span className="swatch bg-band-yellow" />the column you picked<span className="swatch bg-band-red ml-5" />its value flows here<span className="swatch bg-band-blue ml-5" />its rows depend on it</p>
           {loaded
-            ? <Board graph={loaded.graph} radius={radius} chips={chips} meet={meet} onPick={pick} />
+            ? <Board graph={loaded.graph} radius={radius} chips={chips} meet={meet} focus={focus} zoom={zoom} onPick={pick} />
             : <p className="opacity-70">Loading the graph into Relate…</p>}
         </main>
 
-        <aside className="panel w-full shrink-0 overflow-y-auto px-6 py-6 lg:w-[24rem]" aria-live="polite">
+        <aside className="panel" aria-live="polite">
           {live.snapshot?.error && <p className="note">The last edit could not be read: {live.snapshot.error}</p>}
           {drift && (drift.findings.length > 0 || drift.failures.length > 0) && (
             <section className="mb-7">
@@ -185,6 +205,7 @@ export function Explorer() {
             </p>
           )}
         </aside>
+      </div>
       </div>
 
     </TooltipProvider>

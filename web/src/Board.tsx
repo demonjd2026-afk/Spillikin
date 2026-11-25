@@ -8,9 +8,15 @@ interface Segment { key: string; x1: number; y1: number; x2: number; y2: number;
 const BAND = { value: 'var(--color-band-red)', rows: 'var(--color-band-blue)', surface: 'var(--color-band-yellow)' } as const;
 
 /** The table: one lane per dependency depth, sources on the left, the things people look at on the right. */
-export function Board({ graph, radius, chips, meet, onPick }: {
-  graph: GraphFile; radius: Radius | null; chips: Map<string, string>; meet: string[]; onPick: (id: string) => void;
+const LANE = 200, GAP = 40, PAD = 40; // px at zoom 1: lane width (12.5rem), gap-10, right padding
+
+export function Board({ graph, radius, chips, meet, focus, zoom, onPick }: {
+  graph: GraphFile; radius: Radius | null; chips: Map<string, string>; meet: string[];
+  /** Hide every table and column the selection does not touch. */ focus: boolean;
+  /** 'fit' scales the board to the space it has; a number is an explicit zoom. */ zoom: 'fit' | number;
+  onPick: (id: string) => void;
 }) {
+  const [room, setRoom] = useState(0);
   const meeting = useMemo(() => new Set(meet), [meet]);
   const table = useRef<HTMLDivElement>(null);
   const [sticks, setSticks] = useState<Segment[]>([]);
@@ -46,6 +52,50 @@ export function Board({ graph, radius, chips, meet, onPick }: {
   }, [radius]);
   const surfaced = useMemo(() => new Set(radius?.exposures.map((exposure) => exposure.id)), [radius]);
 
+  // Focus: keep only the tables the change touches, and inside them only the columns that move.
+  const focused = focus && radius !== null;
+  const touched = useMemo(() => new Set(radius ? [radius.target.slice(0, radius.target.lastIndexOf('.')), ...radius.hits.map((hit) => hit.relation)] : []), [radius]);
+  const shown = useMemo(() => lanes
+    .map((lane) => ({ ...lane, relations: focused ? lane.relations.filter((relation) => touched.has(relation.id)) : lane.relations }))
+    .filter((lane) => lane.relations.length > 0), [lanes, focused, touched]);
+  const exposures = focused ? graph.nodes.Exposure.filter((exposure) => surfaced.has(exposure.id)) : graph.nodes.Exposure;
+  const columns = shown.length + (exposures.length ? 1 : 0);
+  const natural = columns * LANE + Math.max(columns - 1, 0) * GAP + PAD;
+  const scale = zoom === 'fit' ? Math.max(0.6, Math.min(1.15, room ? room / natural : 1)) : zoom;
+
+  // When the board is wider than its window, the change is told step by step: the view starts on the
+  // picked column and travels right with each hop, so what has already moved slides off to the left.
+  const overflowing = room > 0 && natural * scale > room + 4;
+  const pace = overflowing ? 0.42 : 0.11;
+  useLayoutEffect(() => {
+    const holder = table.current?.parentElement;
+    const root = table.current;
+    if (!holder || !root || !radius || !overflowing) return;
+    const left = (id: string) => {
+      const box = root.querySelector<HTMLElement>(`[data-col="${id}"]`)?.getBoundingClientRect();
+      return box ? box.left - root.getBoundingClientRect().left : null;
+    };
+    const byHop = new Map<number, number>();
+    for (const hit of radius.hits) {
+      const x = left(hit.id);
+      if (x !== null) byHop.set(hit.hops, Math.min(byHop.get(hit.hops) ?? x, x));
+    }
+    const go = (x: number | null) => { if (x !== null) holder.scrollTo({ left: Math.max(0, x - holder.clientWidth * 0.3), behavior: still ? 'auto' : 'smooth' }); };
+    go(left(radius.target));
+    const timers = [...byHop.entries()].map(([hops, x]) => window.setTimeout(() => go(x), (still ? 0 : Math.min(hops, 9) * pace) * 1000));
+    return () => timers.forEach(window.clearTimeout);
+  }, [radius, overflowing, pace, still, focused, scale]);
+
+  useLayoutEffect(() => {
+    const holder = table.current?.parentElement;
+    if (!holder) return;
+    const read = () => setRoom(holder.clientWidth - 48);
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(holder);
+    return () => observer.disconnect();
+  }, []);
+
   // Sticks lie on the table under the tiles, so they show in the gutters and never cover a column name.
   // Sticks are measured from the laid-out tiles, so they stay true to whatever the browser rendered.
   useLayoutEffect(() => {
@@ -72,9 +122,10 @@ export function Board({ graph, radius, chips, meet, onPick }: {
         if (!from || !to) return [];
         return [{
           key: `${stick.kind}:${stick.src}>${stick.dst}`,
-          x1: from.right - origin.left, y1: from.top + from.height / 2 - origin.top,
-          x2: to.left - origin.left, y2: to.top + Math.min(to.height / 2, 14) - origin.top,
-          band: BAND[stick.kind], delay: still ? 0 : Math.min(stick.hops, 9) * 0.11,
+          // Rectangles are measured on screen; the drawing lives inside the zoomed board, so undo the zoom.
+          x1: (from.right - origin.left) / scale, y1: (from.top + from.height / 2 - origin.top) / scale,
+          x2: (to.left - origin.left) / scale, y2: (to.top + Math.min(to.height / 2, 14 * scale) - origin.top) / scale,
+          band: BAND[stick.kind], delay: still ? 0 : Math.min(stick.hops, 9) * pace,
         }];
       }));
     };
@@ -82,14 +133,14 @@ export function Board({ graph, radius, chips, meet, onPick }: {
     const observer = new ResizeObserver(measure);
     observer.observe(root);
     return () => observer.disconnect();
-  }, [radius, state, still]);
+  }, [radius, state, still, scale, focused, pace]);
 
   const along = (s: Segment, t: number) => ({ x: s.x1 + (s.x2 - s.x1) * t, y: s.y1 + (s.y2 - s.y1) * t });
 
   return (
-    <div ref={table} className="relative flex w-max items-start gap-14 pt-2 pr-10">
-      {lanes.map((lane) => (
-        <section key={lane.depth} className="flex w-[15rem] flex-col gap-5" aria-label={lane.relations[0]?.layer}>
+    <div ref={table} className="relative flex w-max items-start gap-10 pt-2 pr-10" style={{ zoom: scale }}>
+      {shown.map((lane) => (
+        <section key={lane.depth} className="flex w-[12.5rem] flex-col gap-5" aria-label={lane.relations[0]?.layer}>
           {lane.relations.map((relation) => (
             <article key={relation.id} className="tile" data-rel={relation.id}>
               <header className="tile-head">
@@ -99,6 +150,7 @@ export function Board({ graph, radius, chips, meet, onPick }: {
               <ul className="py-1">
                 {relation.columns.map((column) => {
                   const mark = state.get(column.id)?.state ?? 'idle';
+                  if (focused && mark === 'idle') return null;
                   return (
                     <li key={column.id}>
                       <Tooltip>
@@ -119,20 +171,23 @@ export function Board({ graph, radius, chips, meet, onPick }: {
                   );
                 })}
               </ul>
+              {focused && relation.columns.some((column) => !state.has(column.id)) && (
+                <p className="tile-rest">{relation.columns.filter((column) => !state.has(column.id)).length} columns unchanged</p>
+              )}
             </article>
           ))}
         </section>
       ))}
 
-      <section className="flex w-[15rem] flex-col gap-5" aria-label="exposures">
-        {graph.nodes.Exposure.map((exposure) => (
+      {exposures.length > 0 && <section className="flex w-[12.5rem] flex-col gap-5" aria-label="exposures">
+        {exposures.map((exposure) => (
           <article key={exposure.id} className="exposure" data-exp={exposure.id} data-hit={surfaced.has(exposure.id)}>
             <div className="tile-name">{exposure.id}</div>
             <div className="tile-meta">{exposure.kind.replace('_', ' ')}</div>
             <p className="mt-1 text-[12px] leading-snug opacity-80">{exposure.description}</p>
           </article>
         ))}
-      </section>
+      </section>}
 
       <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible" aria-hidden="true">
         {sticks.map((s) => {

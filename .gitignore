@@ -10,3 +10,6 @@ web/dist/
 # the write-ahead log and lock files are rebuilt on first open.
 **/store/wal/
 **/store/.cypherlite.*
+
+# macOS Finder metadata
+.DS_Store
